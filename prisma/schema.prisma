@@ -1,0 +1,306 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model admin_logs {
+  id         Int       @id @default(autoincrement())
+  admin_id   Int?
+  action     String    @db.VarChar(255)
+  target_id  Int?
+  details    String?   @db.LongText
+  created_at DateTime? @default(now()) @db.Timestamp(0)
+  users      users?    @relation(fields: [admin_id], references: [id], onUpdate: Restrict, map: "admin_logs_ibfk_1")
+
+  @@index([admin_id], map: "admin_id")
+}
+
+model analytics_events {
+  id          Int       @id @default(autoincrement())
+  event_name  String    @db.VarChar(255)
+  user_id     Int?
+  campaign_id Int?
+  properties  String?   @db.LongText
+  created_at  DateTime? @default(now()) @db.Timestamp(0)
+}
+
+model application_stages_history {
+  id             Int       @id @default(autoincrement())
+  application_id Int
+  stage_name     String    @db.VarChar(50)
+  created_at     DateTime? @default(now()) @db.Timestamp(0)
+}
+
+model applications {
+  id                     Int        @id @default(autoincrement())
+  user_id                Int?
+  campaign_id            Int?
+  status                 String?    @default("Applied") @db.VarChar(50)
+  phone                  String?    @db.VarChar(50)
+  city                   String?    @db.VarChar(255)
+  timezone               String?    @db.VarChar(100)
+  sales_type             String?    @db.VarChar(50)
+  average_check          String?    @db.VarChar(50)
+  niche                  String?    @db.VarChar(100)
+  linkedin_url           String?    @db.VarChar(255)
+  telegram_url           String?    @db.VarChar(255)
+  resume_url             String?    @db.VarChar(500)
+  video_pitch_url        String?    @db.VarChar(500)
+  created_at             DateTime?  @default(now()) @db.Timestamp(0)
+  offer_text             String?    @db.Text
+  offer_document_url     String?    @db.VarChar(500)
+  offer_expires_at       DateTime?  @db.Timestamp(0)
+  decline_reason         String?    @db.Text
+  interview_url          String?    @db.VarChar(500)
+  draft_data             String?    @db.LongText
+  revision_target_step   Int?
+  revision_comment       String?    @db.Text
+  revision_requested_at  DateTime?  @db.Timestamp(0)
+  reminder_level         Int?       @default(0)
+  last_activity_at       DateTime?  @default(now()) @db.Timestamp(0)
+  interview_scheduled_at DateTime?  @db.Timestamp(0)
+  calendly_event_uri     String?    @db.VarChar(500)
+  calendly_cancel_url    String?    @db.VarChar(500)
+  is_experience_verified Boolean?   @default(false)
+  is_linkedin_verified   Boolean?   @default(false)
+  is_resume_verified     Boolean?   @default(false)
+  is_video_verified      Boolean?   @default(false)
+  english_level          String?    @db.VarChar(50)
+  years_of_experience    String?    @db.VarChar(50)
+  niches                 String?    @db.LongText
+  state                  String?    @db.VarChar(100)
+  screening_data         String?    @db.LongText
+  campaigns              campaigns? @relation(fields: [campaign_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "applications_campaign_id_campaigns_id_fk")
+  users                  users?     @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "applications_user_id_users_id_fk")
+
+  @@index([campaign_id], map: "applications_campaign_id_campaigns_id_fk")
+  @@index([user_id], map: "applications_user_id_users_id_fk")
+}
+
+model campaigns {
+  id                  Int            @id @default(autoincrement())
+  title               String         @db.VarChar(255)
+  company_name        String         @db.VarChar(255)
+  base_salary         String?        @db.VarChar(100)
+  ote                 String?        @db.VarChar(100)
+  commission          String?        @db.VarChar(255)
+  description         String?        @db.Text
+  requirements        String?        @db.Text
+  created_at          DateTime?      @default(now()) @db.Timestamp(0)
+  status              String?        @default("Active") @db.VarChar(50)
+  logo_url            String?        @db.VarChar(500)
+  cover_url           String?        @db.VarChar(500)
+  is_public           Boolean?       @default(false)
+  niche               String?        @db.VarChar(100)
+  sales_type          String?        @db.VarChar(50)
+  years_of_experience String?        @db.VarChar(50)
+  niches              String?        @db.LongText
+  user_id             Int?
+  users               users?         @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  applications        applications[]
+}
+
+model candidate_answers {
+  id             Int       @id @default(autoincrement())
+  application_id Int
+  question_id    Int
+  answer_text    String?   @db.Text
+  answer_options String?   @db.LongText
+  created_at     DateTime? @default(now()) @db.Timestamp(0)
+}
+
+model candidate_earnings {
+  id                   Int       @id @default(autoincrement())
+  candidate_id         Int
+  startup_id           Int
+  university_id        String?   @db.VarChar(36)
+  total_sales_amount   Int?
+  candidate_commission Int
+  university_cut       Int
+  status               String?   @default("PENDING") @db.VarChar(50)
+  created_at           DateTime? @default(now()) @db.Timestamp(0)
+}
+
+model custom_questions {
+  id            Int       @id @default(autoincrement())
+  campaign_id   Int
+  question_text String    @db.Text
+  question_type String    @db.VarChar(50)
+  options       String?   @db.LongText
+  is_required   Boolean?  @default(true)
+  order_index   Int?      @default(0)
+  created_at    DateTime? @default(now()) @db.Timestamp(0)
+}
+
+model deals {
+  id                              Int       @id @default(autoincrement())
+  candidate_id                    Int
+  employer_id                     Int
+  deal_name                       String    @db.VarChar(255)
+  amount                          Int
+  close_date                      DateTime  @db.Timestamp(0)
+  status                          String?   @default("PENDING_VERIFICATION") @db.VarChar(50)
+  created_at                      DateTime? @default(now()) @db.Timestamp(0)
+  updated_at                      DateTime? @default(now()) @db.Timestamp(0)
+  users_deals_candidate_idTousers users     @relation("deals_candidate_idTousers", fields: [candidate_id], references: [id], onUpdate: Restrict, map: "deals_ibfk_1")
+  users_deals_employer_idTousers  users     @relation("deals_employer_idTousers", fields: [employer_id], references: [id], onUpdate: Restrict, map: "deals_ibfk_2")
+  ledger                          ledger[]
+
+  @@index([candidate_id], map: "candidate_id")
+  @@index([employer_id], map: "employer_id")
+}
+
+model employer_profiles {
+  user_id             Int       @id
+  company_name        String?   @db.VarChar(255)
+  website             String?   @db.VarChar(255)
+  description         String?   @db.Text
+  linkedin_url        String?   @db.VarChar(255)
+  crunchbase_url      String?   @db.VarChar(255)
+  industry            String?   @db.VarChar(100)
+  verification_status String?   @default("pending") @db.VarChar(50)
+  ban_reason          String?   @db.Text
+  created_at          DateTime? @default(now()) @db.Timestamp(0)
+  users               users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "employer_profiles_ibfk_1")
+}
+
+model ledger {
+  id           Int       @id @default(autoincrement())
+  partner_id   Int
+  deal_id      Int
+  amount       Int
+  status       String?   @default("PENDING") @db.VarChar(50)
+  available_at DateTime? @db.Timestamp(0)
+  created_at   DateTime? @default(now()) @db.Timestamp(0)
+  users        users     @relation(fields: [partner_id], references: [id], onUpdate: Restrict, map: "ledger_ibfk_1")
+  deals        deals     @relation(fields: [deal_id], references: [id], onUpdate: Restrict, map: "ledger_ibfk_2")
+
+  @@index([deal_id], map: "deal_id")
+  @@index([partner_id], map: "partner_id")
+}
+
+model marketing_assets {
+  id         Int       @id @default(autoincrement())
+  asset_type String    @db.VarChar(50)
+  title      String    @db.VarChar(255)
+  content    String    @db.Text
+  category   String?   @db.VarChar(255)
+  is_active  Boolean?  @default(true)
+  created_at DateTime? @default(now()) @db.Timestamp(0)
+}
+
+model partner_invites {
+  id                 Int       @id @default(autoincrement())
+  institution_name   String    @db.VarChar(255)
+  commission_rate    String?   @default("0.05") @db.VarChar(10)
+  referral_id        String    @db.VarChar(50)
+  registration_token String    @db.VarChar(255)
+  status             String?   @default("PENDING") @db.VarChar(50)
+  created_at         DateTime? @default(now()) @db.Timestamp(0)
+}
+
+model payout_requests {
+  id            Int       @id @default(autoincrement())
+  university_id String    @db.VarChar(36)
+  amount        Int
+  status        String?   @default("PENDING") @db.VarChar(50)
+  created_at    DateTime? @default(now()) @db.Timestamp(0)
+  paid_at       DateTime? @db.Timestamp(0)
+}
+
+model promo_kits {
+  id                Int       @id @default(autoincrement())
+  title             String    @db.VarChar(255)
+  social_text       String    @db.Text
+  image_url         String?   @db.VarChar(500)
+  pdf_url           String?   @db.VarChar(500)
+  status            String?   @default("DRAFT") @db.VarChar(50)
+  created_at        DateTime? @default(now()) @db.Timestamp(0)
+  utm_campaign_slug String?   @db.VarChar(255)
+}
+
+model screening_requests {
+  id                       Int       @id @default(autoincrement())
+  application_id           Int
+  requested_by_employer_id Int
+  status                   String?   @default("pending") @db.VarChar(50)
+  payload                  String?   @db.LongText
+  created_at               DateTime? @default(now()) @db.Timestamp(0)
+  updated_at               DateTime? @default(now()) @db.Timestamp(0)
+}
+
+model universities {
+  id                  String    @id @db.VarChar(36)
+  user_id             Int       @unique(map: "user_id")
+  institution_name    String    @db.VarChar(255)
+  contact_name        String    @db.VarChar(255)
+  logo_url            String?   @db.VarChar(500)
+  verification_status String?   @default("pending") @db.VarChar(50)
+  stripe_account_id   String?   @db.VarChar(255)
+  created_at          DateTime? @default(now()) @db.Timestamp(0)
+  partner_code        String?   @unique(map: "partner_code") @db.VarChar(50)
+  wallet_balance      Int?      @default(0)
+  commission_rate     String?   @default("0.05") @db.VarChar(10)
+  type                String?   @default("University") @db.VarChar(50)
+  users               users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "universities_ibfk_1")
+}
+
+model university_cohorts {
+  id            Int       @id @default(autoincrement())
+  university_id String    @db.VarChar(36)
+  cohort_name   String    @db.VarChar(255)
+  invite_code   String    @unique(map: "invite_code") @db.VarChar(100)
+  created_at    DateTime? @default(now()) @db.Timestamp(0)
+}
+
+model users {
+  id                              Int                @id @default(autoincrement())
+  email                           String             @unique(map: "users_email_unique") @db.VarChar(255)
+  password_hash                   String?            @db.VarChar(255)
+  first_name                      String?            @db.VarChar(255)
+  last_name                       String?            @db.VarChar(255)
+  role                            String?            @default("Candidate") @db.VarChar(50)
+  created_at                      DateTime?          @default(now()) @db.Timestamp(0)
+  phone                           String?            @db.VarChar(50)
+  linkedin_url                    String?            @db.VarChar(255)
+  resume_url                      String?            @db.VarChar(500)
+  google_id                       String?            @db.VarChar(255)
+  linkedin_id                     String?            @db.VarChar(255)
+  utm_source                      String?            @db.VarChar(255)
+  utm_medium                      String?            @db.VarChar(255)
+  utm_campaign                    String?            @db.VarChar(255)
+  ref_id                          String?            @db.VarChar(255)
+  video_pitch_url                 String?            @db.VarChar(500)
+  city                            String?            @db.VarChar(255)
+  timezone                        String?            @db.VarChar(100)
+  sales_type                      String?            @db.VarChar(50)
+  average_check                   String?            @db.VarChar(50)
+  niche                           String?            @db.VarChar(100)
+  telegram_url                    String?            @db.VarChar(255)
+  marketing_emails_unsubscribed   Boolean?           @default(false)
+  is_no_show                      Boolean?           @default(false)
+  referred_by_partner_id          String?            @db.VarChar(36)
+  share_data_with_partner         Boolean?           @default(false)
+  years_of_experience             String?            @db.VarChar(50)
+  niches                          String?            @db.LongText
+  state                           String?            @db.VarChar(100)
+  cohort_id                       Int?
+  commission_rate                 String?            @default("0.05") @db.VarChar(10)
+  wallet_balance                  Int?               @default(0)
+  candidate_status                String?            @default("Onboarding") @db.VarChar(50)
+  video_pitch_status              String?            @default("pending") @db.VarChar(50)
+  is_deleted                      Boolean?           @default(false)
+  avatar_url                      String?            @db.VarChar(500)
+  campaigns                       campaigns[]
+  admin_logs                      admin_logs[]
+  applications                    applications[]
+  deals_deals_candidate_idTousers deals[]            @relation("deals_candidate_idTousers")
+  deals_deals_employer_idTousers  deals[]            @relation("deals_employer_idTousers")
+  employer_profiles               employer_profiles?
+  ledger                          ledger[]
+  universities                    universities?
+}

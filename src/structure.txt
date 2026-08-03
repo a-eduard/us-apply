@@ -1,0 +1,153 @@
+Ñòðóêòóðà ïàïîê
+Ñåðèéíûé íîìåð òîìà: 2607-D994
+C:.
+¦   mail.ts
+¦   structure.txt
+¦   
++---actions
+¦       s3.ts
+¦       
++---app
+¦   ¦   globals.css
+¦   ¦   layout.tsx
+¦   ¦   page.tsx
+¦   ¦   
+¦   +---(auth)
+¦   ¦   +---login
+¦   ¦   ¦       page.tsx
+¦   ¦   ¦       
+¦   ¦   L---register
+¦   ¦           page.tsx
+¦   ¦           
+¦   +---api
+¦   ¦   +---admin
+¦   ¦   ¦       route.ts
+¦   ¦   ¦       
+¦   ¦   +---applications
+¦   ¦   ¦   ¦   route.ts
+¦   ¦   ¦   ¦   
+¦   ¦   ¦   +---draft
+¦   ¦   ¦   ¦   ¦   route.ts
+¦   ¦   ¦   ¦   ¦   
+¦   ¦   ¦   ¦   L---[campaignId]
+¦   ¦   ¦   ¦           route.ts
+¦   ¦   ¦   ¦           
+¦   ¦   ¦   +---quick-apply
+¦   ¦   ¦   ¦       route.ts
+¦   ¦   ¦   ¦       
+¦   ¦   ¦   L---[appId]
+¦   ¦   ¦       +---enrich
+¦   ¦   ¦       ¦       route.ts
+¦   ¦   ¦       ¦       
+¦   ¦   ¦       +---screening
+¦   ¦   ¦       ¦       route.ts
+¦   ¦   ¦       ¦       
+¦   ¦   ¦       +---status
+¦   ¦   ¦       ¦       route.ts
+¦   ¦   ¦       ¦       
+¦   ¦   ¦       +---verify-field
+¦   ¦   ¦       ¦       route.ts
+¦   ¦   ¦       ¦       
+¦   ¦   ¦       L---withdraw
+¦   ¦   ¦               route.ts
+¦   ¦   ¦               
+¦   ¦   +---auth
+¦   ¦   ¦   +---register
+¦   ¦   ¦   ¦       route.ts
+¦   ¦   ¦   ¦       
+¦   ¦   ¦   L---[...nextauth]
+¦   ¦   ¦           route.ts
+¦   ¦   ¦           
+¦   ¦   +---campaigns
+¦   ¦   ¦   L---explore
+¦   ¦   ¦           route.ts
+¦   ¦   ¦           
+¦   ¦   +---employer
+¦   ¦   ¦   L---campaigns
+¦   ¦   ¦       ¦   route.ts
+¦   ¦   ¦       ¦   
+¦   ¦   ¦       L---[campaignId]
+¦   ¦   ¦               route.ts
+¦   ¦   ¦               
+¦   ¦   +---screening
+¦   ¦   ¦   L---[appId]
+¦   ¦   ¦       L---verify
+¦   ¦   ¦               route.ts
+¦   ¦   ¦               
+¦   ¦   +---upload
+¦   ¦   ¦   ¦   route.ts
+¦   ¦   ¦   ¦   
+¦   ¦   ¦   +---local
+¦   ¦   ¦   ¦       route.ts
+¦   ¦   ¦   ¦       
+¦   ¦   ¦   L---presign
+¦   ¦   ¦           route.ts
+¦   ¦   ¦           
+¦   ¦   L---users
+¦   ¦       L---[userId]
+¦   ¦           +---applications
+¦   ¦           ¦       route.ts
+¦   ¦           ¦       
+¦   ¦           L---profile
+¦   ¦                   route.ts
+¦   ¦                   
+¦   +---campaign
+¦   ¦   L---[id]
+¦   ¦           page.tsx
+¦   ¦           
+¦   +---dashboard
+¦   ¦   +---candidate
+¦   ¦   ¦       CandidateClient.tsx
+¦   ¦   ¦       page.tsx
+¦   ¦   ¦       
+¦   ¦   L---employer
+¦   ¦       ¦   EmployerClient.tsx
+¦   ¦       ¦   page.tsx
+¦   ¦       ¦   
+¦   ¦       L---campaigns
+¦   ¦           +---new
+¦   ¦           ¦       page.tsx
+¦   ¦           ¦       
+¦   ¦           L---[campaignId]
+¦   ¦               ¦   CampaignDetailClient.tsx
+¦   ¦               ¦   page.tsx
+¦   ¦               ¦   
+¦   ¦               L---edit
+¦   ¦                       page.tsx
+¦   ¦                       
+¦   L---wizard
+¦       L---[step]
+¦               page.tsx
+¦               WizardClient.tsx
+¦               
++---components
+¦   +---dashboard
+¦   ¦       CalendlyModal.tsx
+¦   ¦       CandidateApplicationCard.tsx
+¦   ¦       EmployerCandidateCard.tsx
+¦   ¦       ScreeningForm.tsx
+¦   ¦       SmartBlockWrapper.tsx
+¦   ¦       
+¦   +---layout
+¦   ¦       ClientWrapper.tsx
+¦   ¦       Footer.tsx
+¦   ¦       Header.tsx
+¦   ¦       
+¦   L---wizard
+¦           LinkedInAuthButton.tsx
+¦           StepOne.tsx
+¦           StepThree.tsx
+¦           StepTwo.tsx
+¦           
++---lib
+¦       auth.ts
+¦       prisma.ts
+¦       s3.ts
+¦       utils.ts
+¦       
++---providers
+¦       AuthProvider.tsx
+¦       
+L---schemas
+        wizard.ts
+        
