@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import WizardClient from "./WizardClient";
 
@@ -20,5 +21,9 @@ export default async function WizardPage({ params }: WizardPageProps) {
     notFound();
   }
 
-  return <WizardClient initialStep={stepNumber - 1} />;
+  return (
+    <Suspense fallback={null}>
+      <WizardClient initialStep={stepNumber - 1} />
+    </Suspense>
+  );
 }

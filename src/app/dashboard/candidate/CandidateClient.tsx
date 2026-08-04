@@ -19,7 +19,9 @@ import {
   ChevronRight,
   Building2,
   Clock,
-  ArrowUpRight
+  ArrowUpRight,
+  Menu,
+  X
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import ProfileSettingsForm from "@/components/dashboard/ProfileSettingsForm";
@@ -39,6 +41,7 @@ export default function CandidateClient() {
   const [loading, setLoading] = useState(true);
 
   const [activeTab, setActiveTab] = useState<"dashboard" | "applications" | "settings">("dashboard");
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false); // Новое состояние для мобильного меню
 
   const isFirstLoad = useRef(true);
   const userId = (session?.user as any)?.id;
@@ -47,7 +50,6 @@ export default function CandidateClient() {
   const fetchApplications = () => {
     if (!userId) return;
 
-    // ИСПРАВЛЕНО: Добавлен сброс кэша ?_t=${Date.now()} чтобы профили не смешивались
     fetch(`/api/users/${userId}/profile?_t=${Date.now()}`)
       .then(res => res.ok ? res.json() : null)
       .then(data => { if (data && !data.error) setUserProfile(data); })
@@ -72,7 +74,6 @@ export default function CandidateClient() {
 
   useEffect(() => {
     if (status === "authenticated" && userId) {
-      // ИСПРАВЛЕНО: Жесткое разделение ролей. Если это работодатель, выкидываем его отсюда
       if (userRole === "Employer" || userRole === "Admin") {
         router.push("/dashboard/employer");
         return;
@@ -129,25 +130,50 @@ export default function CandidateClient() {
     { id: "applications", label: "Applications", icon: Briefcase },
   ] as const;
 
+  const handleTabChange = (tabId: any) => {
+    setActiveTab(tabId);
+    setIsMobileMenuOpen(false); // Автоматически закрываем меню на мобилке при клике
+  };
+
   return (
-    <div className="flex h-screen bg-[#F4F6F9] font-sans text-slate-900 overflow-hidden">
+    <div className="flex h-screen bg-[#F4F6F9] font-sans text-slate-900 overflow-hidden relative">
       <style>{`header { display: none !important; }`}</style>
 
-      {/* SIDEBAR */}
-      <aside className="w-[280px] bg-white flex flex-col shadow-[4px_0_24px_rgba(0,0,0,0.02)] z-20 shrink-0">
-        <div className="h-24 flex items-center px-10 cursor-pointer" onClick={() => router.push('/')}>
-          <img src="/usc_logo.png" alt="USclosers Logo" className="h-8 shrink-0 mr-3" />
-          <span className="font-extrabold text-xl tracking-tight text-slate-900">USclosers</span>
+      {/* MOBILE OVERLAY */}
+      {isMobileMenuOpen && (
+        <div 
+          className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40 lg:hidden"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
+
+      {/* SIDEBAR (Responsive) */}
+      <aside className={cn(
+        "bg-white flex flex-col shadow-[4px_0_24px_rgba(0,0,0,0.02)] z-50 h-full fixed lg:relative lg:translate-x-0 w-[280px] shrink-0 transition-transform duration-300",
+        isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
+      )}>
+        <div className="h-20 lg:h-24 flex items-center justify-between px-6 lg:px-10">
+          <div className="flex items-center cursor-pointer" onClick={() => router.push('/')}>
+            <img src="/usc_logo.png" alt="USclosers Logo" className="h-8 shrink-0 mr-3" />
+            <span className="font-extrabold text-xl tracking-tight text-slate-900">USclosers</span>
+          </div>
+          {/* Close button for mobile */}
+          <button 
+            onClick={() => setIsMobileMenuOpen(false)}
+            className="lg:hidden p-2 text-slate-400 hover:text-slate-600 rounded-lg"
+          >
+            <X className="w-6 h-6" />
+          </button>
         </div>
 
-        <nav className="flex-1 px-6 py-4 space-y-2 mt-4">
+        <nav className="flex-1 px-4 lg:px-6 py-4 space-y-2 mt-2 lg:mt-4">
           {NAV_ITEMS.map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
             return (
               <button
                 key={item.id}
-                onClick={() => setActiveTab(item.id)}
+                onClick={() => handleTabChange(item.id)}
                 className={cn(
                   "w-full flex items-center gap-4 px-4 py-3.5 rounded-2xl font-semibold text-sm transition-all duration-300",
                   isActive
@@ -162,9 +188,9 @@ export default function CandidateClient() {
           })}
         </nav>
 
-        <div className="p-6 border-t border-slate-100 space-y-2">
+        <div className="p-4 lg:p-6 border-t border-slate-100 space-y-2">
           <button
-            onClick={() => setActiveTab("settings")}
+            onClick={() => handleTabChange("settings")}
             className={cn(
               "w-full flex items-center gap-4 px-4 py-3 rounded-2xl font-semibold text-sm transition-all",
               activeTab === "settings" ? "bg-slate-900 text-white shadow-md" : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
@@ -184,77 +210,87 @@ export default function CandidateClient() {
       <main className="flex-1 flex flex-col h-screen overflow-hidden relative">
 
         {/* TOP HEADER */}
-        <header className="h-24 px-10 flex items-center justify-between shrink-0">
-          <div>
-            <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">
-              {activeTab === 'dashboard' && 'Welcome back, ' + dbFirstName}
-              {activeTab === 'applications' && 'Job Board & Applications'}
-              {activeTab === 'settings' && 'Profile Settings'}
-            </h1>
-            <p className="text-sm font-medium text-slate-500 mt-1">
-              {activeTab === 'dashboard' && "Here is what's happening with your profile today."}
-              {activeTab === 'settings' && "Manage your personal information and preferences."}
-              {activeTab === 'applications' && "Browse available roles and track your application statuses."}
-            </p>
-          </div>
-
-          <div className="flex items-center gap-6">
-            <button className="relative p-2 text-slate-400 hover:text-slate-900 transition-colors">
-              <Bell className="w-6 h-6" />
-              {activeApps.length > 0 && <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-rose-500 border-2 border-[#F4F6F9]"></span>}
+        <div className="h-20 lg:h-24 px-4 sm:px-6 lg:px-10 flex items-center justify-between shrink-0 bg-[#F4F6F9] z-10">
+          <div className="flex items-center gap-3 lg:gap-0">
+            {/* Hamburger Button for Mobile */}
+            <button 
+              onClick={() => setIsMobileMenuOpen(true)}
+              className="lg:hidden p-2 -ml-2 text-slate-500 hover:text-slate-900 hover:bg-slate-200/50 rounded-xl transition-colors"
+            >
+              <Menu className="w-6 h-6" />
             </button>
 
-            <div className="flex items-center gap-3 bg-white px-3 py-1.5 rounded-full shadow-sm border border-slate-200/50 cursor-pointer hover:shadow-md transition-shadow">
-              <div className="w-9 h-9 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold text-sm">
-                {userInitials}
-              </div>
-              <span className="font-bold text-sm text-slate-900 pr-2">{displayName}</span>
+            <div>
+              <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
+                {activeTab === 'dashboard' && 'Welcome back, ' + dbFirstName}
+                {activeTab === 'applications' && 'Job Board & Apps'}
+                {activeTab === 'settings' && 'Profile Settings'}
+              </h1>
+              <p className="hidden sm:block text-sm font-medium text-slate-500 mt-1">
+                {activeTab === 'dashboard' && "Here is what's happening with your profile today."}
+                {activeTab === 'settings' && "Manage your personal information and preferences."}
+                {activeTab === 'applications' && "Browse available roles and track your application statuses."}
+              </p>
             </div>
           </div>
-        </header>
+
+          <div className="flex items-center gap-3 sm:gap-6">
+            <button className="relative p-2 text-slate-400 hover:text-slate-900 transition-colors">
+              <Bell className="w-5 h-5 sm:w-6 sm:h-6" />
+              {activeApps.length > 0 && <span className="absolute top-1.5 right-1.5 sm:top-2 sm:right-2 w-2 h-2 rounded-full bg-rose-500 border-2 border-[#F4F6F9]"></span>}
+            </button>
+
+            <div className="flex items-center gap-2 sm:gap-3 bg-white pl-1.5 pr-3 sm:px-3 py-1.5 rounded-full shadow-sm border border-slate-200/50 cursor-pointer hover:shadow-md transition-shadow">
+              <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold text-xs sm:text-sm">
+                {userInitials}
+              </div>
+              <span className="hidden sm:inline font-bold text-sm text-slate-900 pr-2">{displayName}</span>
+            </div>
+          </div>
+        </div>
 
         {/* SCROLLABLE DASHBOARD CONTENT */}
-        <div className="flex-1 overflow-y-auto px-10 pb-10">
+        <div className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-10 pb-10">
 
           {/* DASHBOARD TAB */}
           {activeTab === "dashboard" && (
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 max-w-[1400px]">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 max-w-[1400px]">
 
               {/* LEFT COLUMN: PROFILE CARD */}
               <div className="lg:col-span-4 xl:col-span-3 space-y-6">
-                <div className="bg-white rounded-[2rem] p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 flex flex-col items-center">
+                <div className="bg-white rounded-[2rem] p-6 lg:p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 flex flex-col items-center">
                   {/* Avatar */}
                   {userProfile?.avatar_url ? (
-                    <img src={userProfile.avatar_url} alt="Avatar" className="w-28 h-28 rounded-full object-cover mb-5 border-4 border-white shadow-lg bg-slate-100" />
+                    <img src={userProfile.avatar_url} alt="Avatar" className="w-24 h-24 sm:w-28 sm:h-28 rounded-full object-cover mb-4 sm:mb-5 border-4 border-white shadow-lg bg-slate-100" />
                   ) : (
-                    <div className="w-28 h-28 rounded-full bg-slate-900 text-white mb-5 flex items-center justify-center font-bold text-3xl shadow-lg shadow-slate-900/20">
+                    <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-slate-900 text-white mb-4 sm:mb-5 flex items-center justify-center font-bold text-3xl shadow-lg shadow-slate-900/20">
                       {userInitials}
                     </div>
                   )}
 
                   {/* Name & Basic Info */}
-                  <h2 className="text-xl font-extrabold text-slate-900 tracking-tight mb-1">{displayName}</h2>
+                  <h2 className="text-lg sm:text-xl font-extrabold text-slate-900 tracking-tight mb-1">{displayName}</h2>
                   <div className="flex flex-col items-center gap-2 mb-6">
                     {userLocation && (
-                      <div className="flex items-center gap-1.5 text-sm text-slate-500 font-medium">
+                      <div className="flex items-center gap-1.5 text-xs sm:text-sm text-slate-500 font-medium">
                         <MapPin className="w-4 h-4 text-slate-400" /> {userLocation}
                       </div>
                     )}
-                    <div className="flex items-center gap-1.5 text-sm text-slate-500 font-medium">
+                    <div className="flex items-center gap-1.5 text-xs sm:text-sm text-slate-500 font-medium">
                       <Mail className="w-4 h-4 text-slate-400" /> {userProfile?.email || session?.user?.email}
                     </div>
                     {userProfile?.phone && (
-                      <div className="flex items-center gap-1.5 text-sm text-slate-500 font-medium">
+                      <div className="flex items-center gap-1.5 text-xs sm:text-sm text-slate-500 font-medium">
                         <Phone className="w-4 h-4 text-slate-400" /> {userProfile.phone}
                       </div>
                     )}
                   </div>
 
                   {/* Divider */}
-                  <div className="w-full h-px bg-slate-100 mb-6"></div>
+                  <div className="w-full h-px bg-slate-100 mb-5 sm:mb-6"></div>
 
                   {/* Experience & Niches */}
-                  <div className="w-full text-left space-y-5 mb-8">
+                  <div className="w-full text-left space-y-4 sm:space-y-5 mb-6 sm:mb-8">
                     <div>
                       <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 block">Experience</span>
                       <span className="text-sm font-semibold text-slate-900">{userProfile?.years_of_experience || "Not specified"}</span>
@@ -274,7 +310,7 @@ export default function CandidateClient() {
                   </div>
 
                   {/* Quick Links */}
-                  <div className="w-full space-y-3 mb-8">
+                  <div className="w-full space-y-3 mb-6 sm:mb-8">
                     {userProfile?.linkedin_url && (
                       <a href={userProfile.linkedin_url} target="_blank" rel="noreferrer" className="flex items-center justify-between p-3 rounded-xl border border-slate-100 hover:border-blue-200 hover:bg-blue-50 transition-colors group">
                         <div className="flex items-center gap-3">
@@ -306,8 +342,8 @@ export default function CandidateClient() {
 
                   {/* Edit Button */}
                   <button
-                    onClick={() => setActiveTab("settings")}
-                    className="w-full bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 font-bold py-3.5 rounded-2xl transition-all active:scale-[0.98]"
+                    onClick={() => handleTabChange("settings")}
+                    className="w-full bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 font-bold py-3 sm:py-3.5 rounded-2xl transition-all active:scale-[0.98]"
                   >
                     Edit Profile
                   </button>
@@ -316,15 +352,15 @@ export default function CandidateClient() {
 
               {/* RIGHT COLUMN: ACTIVE APPLICATIONS WIDGET */}
               <div className="lg:col-span-8 xl:col-span-9 space-y-8">
-                <div className="bg-white rounded-[2rem] p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100">
-                  <div className="flex justify-between items-center mb-6">
+                <div className="bg-white rounded-[2rem] p-6 lg:p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100">
+                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 gap-3 sm:gap-0">
                     <div>
-                      <h3 className="font-extrabold text-xl text-slate-900">Active Applications</h3>
-                      <p className="text-sm font-medium text-slate-500 mt-1">Track your ongoing interview processes.</p>
+                      <h3 className="font-extrabold text-lg sm:text-xl text-slate-900">Active Applications</h3>
+                      <p className="text-xs sm:text-sm font-medium text-slate-500 mt-1">Track your ongoing interview processes.</p>
                     </div>
                     <button
-                      onClick={() => setActiveTab("applications")}
-                      className="text-sm font-bold text-blue-600 hover:text-blue-700 hover:bg-blue-50 px-4 py-2 rounded-xl transition-colors"
+                      onClick={() => handleTabChange("applications")}
+                      className="text-sm font-bold text-blue-600 hover:text-blue-700 hover:bg-blue-50 px-4 py-2 rounded-xl transition-colors self-start sm:self-auto"
                     >
                       View All
                     </button>
@@ -332,12 +368,12 @@ export default function CandidateClient() {
 
                   <div className="space-y-3">
                     {activeApps.length === 0 ? (
-                      <div className="py-12 flex flex-col items-center justify-center text-center border-2 border-dashed border-slate-100 rounded-2xl bg-slate-50/50">
+                      <div className="py-10 sm:py-12 flex flex-col items-center justify-center text-center border-2 border-dashed border-slate-100 rounded-2xl bg-slate-50/50 px-4">
                         <Briefcase className="w-10 h-10 text-slate-300 mb-3" />
                         <h4 className="font-bold text-slate-900 mb-1">No active applications</h4>
                         <p className="text-sm text-slate-500 font-medium">Head over to the Applications tab to find your next role.</p>
                         <button
-                          onClick={() => setActiveTab("applications")}
+                          onClick={() => handleTabChange("applications")}
                           className="mt-4 px-6 py-2.5 bg-slate-900 text-white font-bold rounded-xl text-sm hover:bg-slate-800 transition-all active:scale-[0.98]"
                         >
                           Find Jobs
@@ -350,22 +386,22 @@ export default function CandidateClient() {
                         const logoUrl = app.campaign?.logo_url || app.campaign?.logoUrl;
 
                         return (
-                          <div key={app.id} className="group flex items-center justify-between p-5 rounded-2xl border border-slate-100 hover:border-slate-200 hover:shadow-md transition-all bg-white">
-                            <div className="flex items-center gap-5">
+                          <div key={app.id} className="group flex flex-col sm:flex-row sm:items-center justify-between p-4 sm:p-5 rounded-2xl border border-slate-100 hover:border-slate-200 hover:shadow-md transition-all bg-white gap-4 sm:gap-0">
+                            <div className="flex items-center gap-4 sm:gap-5">
                               {logoUrl ? (
-                                <img src={logoUrl} alt="Logo" className="w-12 h-12 rounded-xl object-cover border border-slate-100" />
+                                <img src={logoUrl} alt="Logo" className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl object-cover border border-slate-100 shrink-0" />
                               ) : (
-                                <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center font-bold text-lg border border-blue-100">
+                                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center font-bold text-base sm:text-lg border border-blue-100 shrink-0">
                                   {companyName.charAt(0)}
                                 </div>
                               )}
                               <div>
-                                <h4 className="font-bold text-slate-900 text-base">{campaignTitle}</h4>
-                                <div className="flex items-center gap-3 mt-1">
-                                  <div className="flex items-center gap-1 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                                    <Building2 className="w-3.5 h-3.5 text-slate-400" /> {companyName}
+                                <h4 className="font-bold text-slate-900 text-sm sm:text-base line-clamp-1">{campaignTitle}</h4>
+                                <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-1">
+                                  <div className="flex items-center gap-1 text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                                    <Building2 className="w-3 sm:w-3.5 h-3 sm:h-3.5 text-slate-400" /> {companyName}
                                   </div>
-                                  <div className="w-1 h-1 rounded-full bg-slate-300"></div>
+                                  <div className="hidden sm:block w-1 h-1 rounded-full bg-slate-300"></div>
                                   <div className="flex items-center gap-1 text-xs font-medium text-slate-500">
                                     <Clock className="w-3.5 h-3.5 text-slate-400" />
                                     {app.created_at || app.createdAt
@@ -377,13 +413,13 @@ export default function CandidateClient() {
                               </div>
                             </div>
 
-                            <div className="flex items-center gap-5">
-                              <div className="px-4 py-1.5 rounded-full border border-blue-100 bg-blue-50 text-blue-700 text-xs font-bold">
+                            <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-5 w-full sm:w-auto mt-2 sm:mt-0 pt-3 sm:pt-0 border-t sm:border-0 border-slate-50">
+                              <div className="px-3 sm:px-4 py-1 sm:py-1.5 rounded-full border border-blue-100 bg-blue-50 text-blue-700 text-xs font-bold">
                                 {app.status}
                               </div>
                               <button
-                                onClick={() => setActiveTab("applications")}
-                                className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center group-hover:bg-slate-900 group-hover:text-white transition-colors text-slate-400"
+                                onClick={() => handleTabChange("applications")}
+                                className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center sm:group-hover:bg-slate-900 sm:group-hover:text-white transition-colors text-slate-400"
                               >
                                 <ChevronRight className="w-4 h-4" />
                               </button>
@@ -403,13 +439,13 @@ export default function CandidateClient() {
           {activeTab === "applications" && (
             <div className="max-w-[1400px]">
               {allCampaignsList.length === 0 ? (
-                <div className="bg-white rounded-[2rem] p-12 text-center border border-slate-100 shadow-sm py-20 flex flex-col items-center">
-                  <Briefcase className="w-16 h-16 text-slate-200 mb-4" />
-                  <h2 className="text-2xl font-bold mb-2 text-slate-900">No opportunities available</h2>
-                  <p className="text-slate-500 font-medium mb-6">There are currently no active job postings. Check back later!</p>
+                <div className="bg-white rounded-[2rem] p-8 lg:p-12 text-center border border-slate-100 shadow-sm py-16 lg:py-20 flex flex-col items-center">
+                  <Briefcase className="w-12 h-12 lg:w-16 lg:h-16 text-slate-200 mb-4" />
+                  <h2 className="text-xl lg:text-2xl font-bold mb-2 text-slate-900">No opportunities available</h2>
+                  <p className="text-sm lg:text-base text-slate-500 font-medium mb-6">There are currently no active job postings. Check back later!</p>
                 </div>
               ) : (
-                <div className="bg-white rounded-[2rem] p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100">
+                <div className="bg-white rounded-[2rem] p-4 sm:p-6 lg:p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {allCampaignsList.map(({ campaign, application }) => {
                       const companyName = campaign.company_name || campaign.companyName || "Confidential";
@@ -435,20 +471,20 @@ export default function CandidateClient() {
                       }
 
                       return (
-                        <div key={campaign.id} className="flex flex-col p-6 rounded-2xl border border-slate-100 hover:border-blue-200 hover:shadow-md transition-all bg-white relative group">
+                        <div key={campaign.id} className="flex flex-col p-4 sm:p-6 rounded-2xl border border-slate-100 hover:border-blue-200 hover:shadow-md transition-all bg-white relative group">
 
-                          <div className="flex justify-between items-start mb-6">
-                            <div className="flex gap-4 items-start">
+                          <div className="flex justify-between items-start mb-5 sm:mb-6">
+                            <div className="flex gap-3 sm:gap-4 items-start pr-2">
                               {logoUrl ? (
-                                <img src={logoUrl} alt="Logo" className="w-12 h-12 rounded-xl object-cover border border-slate-100 shrink-0" />
+                                <img src={logoUrl} alt="Logo" className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl object-cover border border-slate-100 shrink-0" />
                               ) : (
-                                <div className="w-12 h-12 bg-slate-50 text-slate-400 rounded-xl flex items-center justify-center font-bold text-lg border border-slate-100 shrink-0">
+                                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-slate-50 text-slate-400 rounded-xl flex items-center justify-center font-bold text-base sm:text-lg border border-slate-100 shrink-0">
                                   {companyName.charAt(0)}
                                 </div>
                               )}
                               <div>
-                                <h4 className="font-bold text-slate-900 text-lg leading-tight mb-1 line-clamp-2 pr-4">{campaignTitle}</h4>
-                                <div className="text-sm font-semibold text-slate-500 uppercase tracking-wider">{companyName}</div>
+                                <h4 className="font-bold text-slate-900 text-base sm:text-lg leading-tight mb-1 line-clamp-2">{campaignTitle}</h4>
+                                <div className="text-xs sm:text-sm font-semibold text-slate-500 uppercase tracking-wider line-clamp-1">{companyName}</div>
                               </div>
                             </div>
 
@@ -463,15 +499,18 @@ export default function CandidateClient() {
                             </a>
                           </div>
 
-                          <div className="mt-auto pt-5 border-t border-slate-50 flex items-center justify-between">
-                            <div className="flex items-center gap-1.5 text-xs font-medium text-slate-400">
-                              <Clock className="w-4 h-4" />
+                          <div className="mt-auto pt-4 sm:pt-5 border-t border-slate-50 flex items-center justify-between">
+                            <div className="flex items-center gap-1.5 text-[10px] sm:text-xs font-medium text-slate-400">
+                              <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                              <span className="hidden sm:inline">
+                                {application ? 'Applied' : 'Posted'}
+                              </span>
                               {application
-                                ? `Applied ${application.created_at || application.createdAt ? new Date(application.created_at || application.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : "Recently"}`
-                                : `Posted ${campaign.created_at || campaign.createdAt ? new Date(campaign.created_at || campaign.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : "Recently"}`
+                                ? ` ${application.created_at || application.createdAt ? new Date(application.created_at || application.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : "Recently"}`
+                                : ` ${campaign.created_at || campaign.createdAt ? new Date(campaign.created_at || campaign.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : "Recently"}`
                               }
                             </div>
-                            <div className={cn("px-4 py-1.5 rounded-full border text-xs font-bold", statusBg, statusText, statusBorder)}>
+                            <div className={cn("px-3 sm:px-4 py-1 sm:py-1.5 rounded-full border text-[10px] sm:text-xs font-bold whitespace-nowrap", statusBg, statusText, statusBorder)}>
                               {statusLabel}
                             </div>
                           </div>

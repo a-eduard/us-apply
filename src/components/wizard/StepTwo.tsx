@@ -210,7 +210,7 @@ const StepTwo = forwardRef(function StepTwo({
   const displayNiches = Array.from(new Set([...DEFAULT_NICHES, ...niches]));
 
   return (
-    <form onSubmit={handleSubmit(onSubmit, onError)} className="space-y-8 bg-white p-6 sm:p-8 rounded-2xl shadow-sm border border-slate-200 max-w-2xl mx-auto mt-8">
+    <form onSubmit={handleSubmit(onSubmit, onError)} className="space-y-6 sm:space-y-8 bg-white p-5 sm:p-8 rounded-2xl shadow-sm border border-slate-200 max-w-2xl mx-auto mt-4 sm:mt-8">
       
       {saveError && (
         <div className="p-3 bg-red-50 text-red-600 text-sm font-bold rounded-lg border border-red-100 text-center animate-in fade-in">
@@ -219,12 +219,12 @@ const StepTwo = forwardRef(function StepTwo({
       )}
 
       {/* Years of Experience */}
-      <div className="space-y-2">
+      <div className="space-y-1.5 sm:space-y-2">
         <label className="text-sm font-bold text-slate-700">Years of Experience</label>
         <select 
           {...register('yearsOfExperience')}
           className={cn(
-            "w-full px-4 py-3 rounded-xl border outline-none bg-slate-50 transition-colors text-sm", 
+            "w-full px-4 py-3 sm:py-3 rounded-xl border outline-none bg-slate-50 transition-colors text-base sm:text-sm", 
             errors.yearsOfExperience ? "border-red-500 focus:ring-2 focus:ring-red-500/20" : "border-slate-300 focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600"
           )}
         >
@@ -238,7 +238,7 @@ const StepTwo = forwardRef(function StepTwo({
       </div>
 
       {/* Niches */}
-      <div className="space-y-2" id="niches">
+      <div className="space-y-1.5 sm:space-y-2" id="niches">
         <label className="text-sm font-bold text-slate-700">Niches (up to 3)</label>
         <div className="flex flex-wrap gap-2 pt-1">
           {displayNiches.map(niche => (
@@ -247,7 +247,7 @@ const StepTwo = forwardRef(function StepTwo({
               type="button"
               onClick={() => toggleNiche(niche)}
               className={cn(
-                "px-4 py-2.5 rounded-xl text-sm font-bold transition-all border shadow-sm",
+                "px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all border shadow-sm",
                 niches.includes(niche) 
                   ? "bg-blue-600 text-white border-blue-600" 
                   : "bg-white text-slate-600 border-slate-200 hover:border-blue-600/30 hover:bg-blue-50"
@@ -269,12 +269,12 @@ const StepTwo = forwardRef(function StepTwo({
                 }
                 setShowCustomInput(true);
               }}
-              className="px-4 py-2.5 rounded-xl text-sm font-bold transition-all border shadow-sm bg-white text-slate-500 border-slate-200 border-dashed hover:border-slate-400 hover:text-slate-700 flex items-center gap-1.5"
+              className="px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all border shadow-sm bg-white text-slate-500 border-slate-200 border-dashed hover:border-slate-400 hover:text-slate-700 flex items-center gap-1.5"
             >
-              <Plus className="w-4 h-4" /> Other
+              <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> Other
             </button>
           ) : (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 sm:gap-2 w-full sm:w-auto mt-2 sm:mt-0">
               <input
                 type="text"
                 autoFocus
@@ -290,14 +290,14 @@ const StepTwo = forwardRef(function StepTwo({
                     setCustomNicheValue("");
                   }
                 }}
-                className="px-4 py-2.5 rounded-xl border border-blue-600 outline-none text-sm bg-blue-50/50 w-40"
+                className="px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl border border-blue-600 outline-none text-base sm:text-sm bg-blue-50/50 flex-1 sm:w-40 min-w-0"
               />
               <button
                 type="button"
                 onClick={handleAddCustomNiche}
-                className="p-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors shadow-sm"
+                className="p-2 sm:p-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors shadow-sm shrink-0"
               >
-                <Plus className="w-4 h-4" />
+                <Plus className="w-4 h-4 sm:w-4 sm:h-4" />
               </button>
               <button
                 type="button"
@@ -305,9 +305,9 @@ const StepTwo = forwardRef(function StepTwo({
                   setShowCustomInput(false);
                   setCustomNicheValue("");
                 }}
-                className="p-2.5 bg-slate-100 text-slate-500 rounded-xl hover:bg-slate-200 transition-colors"
+                className="p-2 sm:p-2.5 bg-slate-100 text-slate-500 rounded-xl hover:bg-slate-200 transition-colors shrink-0"
               >
-                <X className="w-4 h-4" />
+                <X className="w-4 h-4 sm:w-4 sm:h-4" />
               </button>
             </div>
           )}
@@ -317,7 +317,7 @@ const StepTwo = forwardRef(function StepTwo({
       </div>
 
       {/* LinkedIn URL */}
-      <div className="space-y-2">
+      <div className="space-y-1.5 sm:space-y-2">
         <label className="text-sm font-bold text-slate-700">
           LinkedIn URL <span className="text-red-500">*</span>
         </label>
@@ -326,7 +326,7 @@ const StepTwo = forwardRef(function StepTwo({
           {...register('linkedinUrl')}
           placeholder="https://linkedin.com/in/username"
           className={cn(
-            "w-full px-4 py-3 rounded-xl border outline-none bg-slate-50 transition-colors text-sm", 
+            "w-full px-4 py-3 sm:py-3 rounded-xl border outline-none bg-slate-50 transition-colors text-base sm:text-sm", 
             errors.linkedinUrl ? "border-red-500 focus:ring-2 focus:ring-red-500/20" : "border-slate-300 focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600"
           )}
         />
@@ -334,10 +334,10 @@ const StepTwo = forwardRef(function StepTwo({
       </div>
 
       {/* Resume Upload */}
-      <div className="space-y-2" id="resumeFile">
+      <div className="space-y-1.5 sm:space-y-2" id="resumeFile">
         <label className="text-sm font-bold text-slate-700">Resume (PDF)</label>
         <div className={cn(
-          "border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer relative", 
+          "border-2 border-dashed rounded-xl p-6 sm:p-8 flex flex-col items-center justify-center bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer relative", 
           errors.resumeFile ? "border-red-500 bg-red-50/50" : "border-slate-300 hover:border-blue-400"
         )}>
           <input 
@@ -346,26 +346,26 @@ const StepTwo = forwardRef(function StepTwo({
             onChange={handleFileChange}
             className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" 
           />
-          <Upload className={cn("w-6 h-6 mb-3", errors.resumeFile ? "text-red-400" : "text-slate-400")} />
+          <Upload className={cn("w-5 h-5 sm:w-6 sm:h-6 mb-2 sm:mb-3", errors.resumeFile ? "text-red-400" : "text-slate-400")} />
           {resumeFile ? (
-            <div className="text-sm font-bold text-blue-600 bg-blue-50 px-4 py-2 rounded-lg">{resumeFile.name}</div>
+            <div className="text-xs sm:text-sm font-bold text-blue-600 bg-blue-50 px-3 sm:px-4 py-2 rounded-lg truncate max-w-full text-center">{resumeFile.name}</div>
           ) : (
             <>
-              <div className="text-sm font-bold text-slate-900 mb-1">Click or drag file</div>
-              <div className="text-xs text-slate-500 font-medium">PDF or DOCX up to 5MB</div>
+              <div className="text-xs sm:text-sm font-bold text-slate-900 mb-1">Click or drag file</div>
+              <div className="text-[10px] sm:text-xs text-slate-500 font-medium">PDF or DOCX up to 5MB</div>
             </>
           )}
         </div>
-        <p className="text-xs text-slate-500 font-medium">Optional. You can upload your resume later from your dashboard.</p>
-        {errors.resumeFile && <p className="text-xs text-red-500 font-bold">{(errors.resumeFile as any).message}</p>}
+        <p className="text-[10px] sm:text-xs text-slate-500 font-medium text-center sm:text-left">Optional. You can upload your resume later from your dashboard.</p>
+        {errors.resumeFile && <p className="text-xs text-red-500 font-bold text-center sm:text-left">{(errors.resumeFile as any).message}</p>}
       </div>
 
       {/* Submit Button */}
-      <div className="pt-4">
+      <div className="pt-2 sm:pt-4">
         <button 
           type="submit" 
           disabled={isSaving} 
-          className="w-full flex items-center justify-center bg-blue-600 text-white font-bold py-3.5 rounded-xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/20 active:scale-[0.98] disabled:opacity-70 gap-2"
+          className="w-full flex items-center justify-center bg-blue-600 text-white font-bold py-3.5 sm:py-4 text-sm sm:text-base rounded-xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/20 active:scale-[0.98] disabled:opacity-70 gap-2"
         >
           {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : (campaignId ? "Continue" : "Save & Continue")}
         </button>

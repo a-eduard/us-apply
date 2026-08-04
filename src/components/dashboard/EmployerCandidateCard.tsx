@@ -92,47 +92,45 @@ export default function EmployerCandidateCard({ candidate, fetchCandidates }: an
 
   return (
     <div className={cn(
-      "border rounded-2xl transition-all duration-300",
+      "border rounded-2xl transition-all duration-300 overflow-hidden w-full",
       expanded ? `shadow-lg ${config.shadow} ${config.border} bg-white` : `bg-white hover:shadow-md border-slate-200`
     )}>
       
       {/* Header */}
       <div 
-        className={cn("p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between cursor-pointer gap-4 rounded-2xl transition-colors", 
+        className={cn("p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between cursor-pointer gap-3 sm:gap-4 transition-colors w-full", 
           !expanded && `hover:${config.bg}`
         )}
         onClick={() => setExpanded(!expanded)}
       >
-        <div className="flex flex-col sm:flex-row sm:items-center gap-5 w-full sm:w-auto">
-          <div className="flex items-center gap-4">
-            <div className={cn("w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg shrink-0 shadow-sm border", config.badge)}>
-              {initials}
-            </div>
-            <div>
-              <div className="font-extrabold text-slate-900 mb-0.5 leading-tight">{candidateFullName}</div>
-              <div className="text-sm font-medium text-slate-500">{candidate.email}</div>
-            </div>
+        <div className="flex items-center gap-3 sm:gap-5 w-full sm:w-auto overflow-hidden">
+          <div className={cn("w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center font-bold text-base sm:text-lg shrink-0 shadow-sm border", config.badge)}>
+            {initials}
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="font-extrabold text-slate-900 mb-0.5 leading-tight truncate">{candidateFullName}</div>
+            <div className="text-xs sm:text-sm font-medium text-slate-500 truncate">{candidate.email}</div>
           </div>
           
-          <div className="hidden md:flex items-center gap-4 border-l border-slate-200 pl-4 ml-2">
+          <div className="hidden md:flex items-center gap-4 border-l border-slate-200 pl-4 ml-2 shrink-0">
             {phone && (
               <div className="flex items-center gap-1.5 text-sm text-slate-600 font-medium">
                 <Phone className="w-3.5 h-3.5 text-slate-400" /> {phone}
               </div>
             )}
             {location && (
-              <div className="flex items-center gap-1.5 text-sm text-slate-600 font-medium">
-                <MapPin className="w-3.5 h-3.5 text-slate-400" /> {location}
+              <div className="flex items-center gap-1.5 text-sm text-slate-600 font-medium truncate max-w-[150px]">
+                <MapPin className="w-3.5 h-3.5 text-slate-400" /> <span className="truncate">{location}</span>
               </div>
             )}
           </div>
         </div>
 
-        <div className="flex items-center gap-4 justify-between sm:justify-end border-t sm:border-none pt-4 sm:pt-0 border-slate-100">
-          <div className={cn("px-4 py-1.5 rounded-full border text-xs font-bold uppercase tracking-wider", config.badge)}>
+        <div className="flex items-center gap-3 sm:gap-4 w-full sm:w-auto justify-between sm:justify-end border-t sm:border-none pt-3 sm:pt-0 border-slate-100 shrink-0">
+          <div className={cn("px-3 sm:px-4 py-1 sm:py-1.5 rounded-full border text-[10px] sm:text-xs font-bold uppercase tracking-wider", config.badge)}>
             {localStatus}
           </div>
-          <div className={cn("w-8 h-8 rounded-full flex items-center justify-center transition-colors shrink-0", 
+          <div className={cn("w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center transition-colors shrink-0", 
             expanded ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-400"
           )}>
              {expanded ? <ChevronUp className="w-4 h-4"/> : <ChevronDown className="w-4 h-4" />}
@@ -147,78 +145,78 @@ export default function EmployerCandidateCard({ candidate, fetchCandidates }: an
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            className="overflow-hidden border-t border-slate-100"
+            className="border-t border-slate-100"
           >
-            <div className="p-6 sm:p-8 bg-slate-50/50 flex flex-col lg:flex-row gap-8">
+            <div className="p-4 sm:p-6 lg:p-8 bg-slate-50/50 flex flex-col lg:flex-row gap-6 lg:gap-8">
               
               {/* ЛЕВАЯ КОЛОНКА */}
-              <div className="flex-1 space-y-6">
+              <div className="flex-1 space-y-5 sm:space-y-6 min-w-0">
                 
                 <div className="md:hidden flex flex-col gap-2 pb-4 border-b border-slate-200">
-                  <h3 className="text-sm font-extrabold text-slate-900 uppercase tracking-widest mb-1">Contact Details</h3>
-                  {phone && <div className="flex items-center gap-2 text-sm text-slate-700 font-medium"><Phone className="w-4 h-4 text-slate-400" /> {phone}</div>}
-                  {location && <div className="flex items-center gap-2 text-sm text-slate-700 font-medium"><MapPin className="w-4 h-4 text-slate-400" /> {location}</div>}
+                  <h3 className="text-xs sm:text-sm font-extrabold text-slate-900 uppercase tracking-widest mb-1">Contact Details</h3>
+                  {phone && <div className="flex items-center gap-2 text-xs sm:text-sm text-slate-700 font-medium"><Phone className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-400 shrink-0" /> <span className="truncate">{phone}</span></div>}
+                  {location && <div className="flex items-center gap-2 text-xs sm:text-sm text-slate-700 font-medium"><MapPin className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-400 shrink-0" /> <span className="truncate">{location}</span></div>}
                 </div>
 
-                <h3 className="text-sm font-extrabold text-slate-900 uppercase tracking-widest border-b border-slate-200 pb-2">
+                <h3 className="text-xs sm:text-sm font-extrabold text-slate-900 uppercase tracking-widest border-b border-slate-200 pb-2">
                   Professional Data
                 </h3>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   {(experience || niche) && (
-                    <div className="p-4 bg-white border border-slate-200 rounded-xl shadow-sm">
-                      <div className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">
-                        <Briefcase className="w-3.5 h-3.5" /> Experience
+                    <div className="p-3 sm:p-4 bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+                      <div className="flex items-center gap-2 text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5 sm:mb-2">
+                        <Briefcase className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" /> Experience
                       </div>
-                      {experience && <div className="text-sm font-bold text-slate-900">{experience}</div>}
-                      {niche && <div className="text-xs font-medium text-slate-500 mt-1">Niche: {niche}</div>}
+                      {experience && <div className="text-sm font-bold text-slate-900 truncate">{experience}</div>}
+                      {niche && <div className="text-xs font-medium text-slate-500 mt-1 truncate">Niche: {niche}</div>}
                     </div>
                   )}
 
                   {linkedin && (
-                    <div className="p-4 bg-white border border-slate-200 rounded-xl shadow-sm flex flex-col justify-between">
-                      <div className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">
-                        <Globe className="w-3.5 h-3.5" /> LinkedIn
+                    <div className="p-3 sm:p-4 bg-white border border-slate-200 rounded-xl shadow-sm flex flex-col justify-between">
+                      <div className="flex items-center gap-2 text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5 sm:mb-2">
+                        <Globe className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" /> LinkedIn
                       </div>
-                      <a href={linkedin} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-sm font-bold text-blue-600 hover:text-blue-700 w-fit">
-                        <LinkIcon className="w-3.5 h-3.5" /> Open Profile
+                      <a href={linkedin} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-blue-600 hover:text-blue-700 w-fit">
+                        <LinkIcon className="w-3 h-3 sm:w-3.5 sm:h-3.5" /> Open Profile
                       </a>
                     </div>
                   )}
 
                   {resume && (
-                    <div className="p-4 bg-white border border-slate-200 rounded-xl shadow-sm flex flex-col justify-between">
-                      <div className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">
-                        <FileText className="w-3.5 h-3.5" /> Resume / CV
+                    <div className="p-3 sm:p-4 bg-white border border-slate-200 rounded-xl shadow-sm flex flex-col justify-between">
+                      <div className="flex items-center gap-2 text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5 sm:mb-2">
+                        <FileText className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" /> Resume / CV
                       </div>
-                      <a href={resume} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-sm font-bold text-slate-700 hover:text-slate-900 w-fit">
-                        <FileText className="w-3.5 h-3.5" /> View Document
+                      <a href={resume} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-slate-700 hover:text-slate-900 w-fit">
+                        <FileText className="w-3 h-3 sm:w-3.5 sm:h-3.5" /> View Document
                       </a>
                     </div>
                   )}
 
                   {video && (
-                    <div className="p-4 bg-white border border-rose-100 rounded-xl shadow-sm flex flex-col justify-between">
-                      <div className="flex items-center gap-2 text-xs font-bold text-rose-400 uppercase tracking-widest mb-2">
-                        <PlayCircle className="w-3.5 h-3.5" /> Video Pitch
+                    <div className="p-3 sm:p-4 bg-white border border-rose-100 rounded-xl shadow-sm flex flex-col justify-between">
+                      <div className="flex items-center gap-2 text-[10px] sm:text-xs font-bold text-rose-400 uppercase tracking-widest mb-1.5 sm:mb-2">
+                        <PlayCircle className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" /> Video Pitch
                       </div>
-                      <a href={video} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-sm font-bold text-rose-600 hover:text-rose-700 w-fit">
-                        <PlayCircle className="w-3.5 h-3.5" /> Watch Video
+                      <a href={video} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-rose-600 hover:text-rose-700 w-fit">
+                        <PlayCircle className="w-3 h-3 sm:w-3.5 sm:h-3.5" /> Watch Video
                       </a>
                     </div>
                   )}
                 </div>
 
                 {screeningData && Object.keys(screeningData).length > 0 && (
-                  <div className="mt-6">
-                    <h3 className="flex items-center gap-2 text-sm font-extrabold text-slate-900 uppercase tracking-widest border-b border-slate-200 pb-2 mb-4">
-                      <ClipboardList className="w-4 h-4 text-slate-400" /> Screening Answers
+                  <div className="mt-5 sm:mt-6">
+                    <h3 className="flex items-center gap-2 text-xs sm:text-sm font-extrabold text-slate-900 uppercase tracking-widest border-b border-slate-200 pb-2 mb-3 sm:mb-4">
+                      <ClipboardList className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-400 shrink-0" /> Screening Answers
                     </h3>
-                    <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-4">
+                    <div className="bg-white border border-slate-200 rounded-xl p-4 sm:p-5 shadow-sm space-y-3 sm:space-y-4">
                       {Object.entries(screeningData).map(([key, value]) => (
                         <div key={key} className="border-b border-slate-100 last:border-0 pb-3 last:pb-0">
-                          <div className="text-xs font-bold text-slate-400 uppercase mb-1">{key.replace(/_/g, ' ')}</div>
-                          <div className="text-sm font-medium text-slate-900">{String(value)}</div>
+                          <div className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase mb-1">{key.replace(/_/g, ' ')}</div>
+                          <div className="text-xs sm:text-sm font-medium text-slate-900 whitespace-pre-wrap">{String(value)}</div>
                         </div>
                       ))}
                     </div>
@@ -228,9 +226,9 @@ export default function EmployerCandidateCard({ candidate, fetchCandidates }: an
               </div>
 
               {/* ПРАВАЯ КОЛОНКА: CRM */}
-              <div className="w-full lg:w-80 flex flex-col gap-6">
+              <div className="w-full lg:w-[320px] shrink-0 flex flex-col gap-5 sm:gap-6">
                 <div>
-                  <h3 className="text-sm font-extrabold text-slate-900 uppercase tracking-widest border-b border-slate-200 pb-2 mb-4">
+                  <h3 className="text-xs sm:text-sm font-extrabold text-slate-900 uppercase tracking-widest border-b border-slate-200 pb-2 mb-3 sm:mb-4">
                     Pipeline Stage
                   </h3>
                   <div className="flex flex-col gap-2">
@@ -239,7 +237,7 @@ export default function EmployerCandidateCard({ candidate, fetchCandidates }: an
                         key={status}
                         onClick={() => handleStatusChange(status)}
                         className={cn(
-                          "w-full text-left px-4 py-2.5 rounded-xl text-sm font-bold transition-all border",
+                          "w-full text-left px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all border",
                           localStatus === status 
                             ? STATUS_CONFIG[status].badge
                             : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300"
@@ -252,21 +250,21 @@ export default function EmployerCandidateCard({ candidate, fetchCandidates }: an
                 </div>
 
                 <div className="flex-1 flex flex-col">
-                  <h3 className="flex items-center gap-2 text-sm font-extrabold text-slate-900 uppercase tracking-widest border-b border-slate-200 pb-2 mb-4">
-                    <StickyNote className="w-4 h-4 text-slate-400" /> Private Notes
+                  <h3 className="flex items-center gap-2 text-xs sm:text-sm font-extrabold text-slate-900 uppercase tracking-widest border-b border-slate-200 pb-2 mb-3 sm:mb-4">
+                    <StickyNote className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-400" /> Private Notes
                   </h3>
                   <textarea
                     placeholder="Write your thoughts about this candidate..."
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
-                    className="w-full flex-1 min-h-[120px] p-3 text-sm bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all resize-none text-slate-700"
+                    className="w-full flex-1 min-h-[100px] sm:min-h-[120px] p-3 text-xs sm:text-sm bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all resize-none text-slate-700"
                   />
                   <button
                     onClick={handleSaveNotes}
                     disabled={isSaving}
-                    className="mt-3 w-full bg-slate-900 hover:bg-slate-800 text-white text-sm font-bold py-2.5 rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                    className="mt-3 w-full bg-slate-900 hover:bg-slate-800 text-white text-xs sm:text-sm font-bold py-2.5 sm:py-3 rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                   >
-                    {isSaving ? "Saving..." : <><Check className="w-4 h-4"/> Save Note</>}
+                    {isSaving ? "Saving..." : <><Check className="w-3.5 h-3.5 sm:w-4 sm:h-4"/> Save Note</>}
                   </button>
                 </div>
               </div>
