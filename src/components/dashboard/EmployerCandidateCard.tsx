@@ -2,289 +2,275 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronDown, ChevronUp, Link as LinkIcon, CheckCircle2 } from 'lucide-react';
+import { ChevronDown, ChevronUp, Link as LinkIcon, FileText, Globe, Briefcase, PlayCircle, StickyNote, Check, Phone, MapPin, ClipboardList } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-const STAGES = ["Applied", "Screening", "Interview", "Offer", "Employee"];
+// ИСПРАВЛЕНИЕ: Убрали Shortlisted, Onboarding сделали зеленым (emerald)
+const STATUS_CONFIG: Record<string, { bg: string; border: string; text: string; badge: string; shadow: string }> = {
+  "New": { bg: "bg-blue-50/30", border: "border-blue-300", text: "text-blue-700", badge: "bg-blue-100 text-blue-700 border-blue-200", shadow: "shadow-blue-900/5" },
+  "Reviewing": { bg: "bg-amber-50/30", border: "border-amber-400", text: "text-amber-700", badge: "bg-amber-100 text-amber-800 border-amber-200", shadow: "shadow-amber-900/5" },
+  "Onboarding": { bg: "bg-emerald-50/30", border: "border-emerald-400", text: "text-emerald-700", badge: "bg-emerald-100 text-emerald-700 border-emerald-200", shadow: "shadow-emerald-900/5" },
+  "Declined": { bg: "bg-rose-50/30", border: "border-rose-400", text: "text-rose-700", badge: "bg-rose-100 text-rose-700 border-rose-200", shadow: "shadow-rose-900/5" },
+};
+
+const AVAILABLE_STATUSES = Object.keys(STATUS_CONFIG);
 
 export default function EmployerCandidateCard({ candidate, fetchCandidates }: any) {
   const [expanded, setExpanded] = useState(false);
-  const [selectedStage, setSelectedStage] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
   
-  const currentStageIndex = STAGES.indexOf(candidate.status) === -1 ? 0 : STAGES.indexOf(candidate.status);
-  const displayedStageIndex = selectedStage ? STAGES.indexOf(selectedStage) : currentStageIndex;
-  const activeStage = selectedStage || candidate.status;
-
-  const [localCandidate, setLocalCandidate] = useState(candidate);
-  const [screeningData, setScreeningData] = useState<any>(null);
-  
-  useEffect(() => { setLocalCandidate(candidate); }, [candidate]);
-  
-  const handleVerifyField = async (field: string, is_verified: boolean, english_level?: string) => {
-    try {
-      // NextAuth automatically includes session cookies
-      await fetch('/api/applications/' + candidate.id + '/verify-field', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ field, is_verified, english_level })
-      });
-      
-      const newCand = { ...localCandidate };
-      if (field === 'experience') newCand.isExperienceVerified = is_verified;
-      if (field === 'linkedin') newCand.isLinkedinVerified = is_verified;
-      if (field === 'resume') newCand.isResumeVerified = is_verified;
-      if (field === 'video_pitch') {
-         newCand.isVideoVerified = is_verified;
-         if (english_level !== undefined) newCand.englishLevel = english_level;
-      }
-      setLocalCandidate(newCand);
-    } catch (e) {
-      console.error(e);
-    }
+  const normalizeStatus = (status: string) => {
+    if (!status || status === "Applied") return "New";
+    if (status === "Screening" || status === "Interview") return "Reviewing";
+    // Все старые успешные статусы сводим в Onboarding
+    if (status === "Offer" || status === "Employee" || status === "Hired" || status === "Shortlisted") return "Onboarding";
+    if (AVAILABLE_STATUSES.includes(status)) return status;
+    return "New";
   };
+
+  const [localStatus, setLocalStatus] = useState(normalizeStatus(candidate.status));
+  const [notes, setNotes] = useState(candidate.employer_notes || "");
 
   useEffect(() => {
-    if (expanded && (candidate.status === 'Screening' || selectedStage === 'Screening')) {
-       fetchScreeningData();
-    }
-  }, [expanded, candidate.status, selectedStage]);
+    setLocalStatus(normalizeStatus(candidate.status));
+  }, [candidate.status]);
 
-  const fetchScreeningData = () => {
-    // NextAuth automatically includes session cookies
-    fetch('/api/applications/' + candidate.id + '/stages')
-      .then(r => r.json())
-      .then(data => {
-        if (data.screening) {
-          setScreeningData(data.screening);
-        }
-      });
-  };
+  const config = STATUS_CONFIG[localStatus] || STATUS_CONFIG["New"];
 
-  const handleVerifyScreening = async (approved: boolean) => {
+  const handleStatusChange = async (newStatus: string) => {
+    setLocalStatus(newStatus); 
     try {
-      let calendlyUrl = null;
-      if (approved) {
-        calendlyUrl = prompt("Please provide your Calendly link for the candidate (e.g. https://calendly.com/your-name/15min):");
-        if (!calendlyUrl) {
-          alert('Calendly link is required to move to Interview.');
-          return;
-        }
-      }
-      
-      // NextAuth automatically includes session cookies
-      await fetch('/api/screening/' + candidate.id + '/verify', {
+      await fetch(`/api/applications/${candidate.id}/status`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ approved, calendlyUrl })
+        body: JSON.stringify({ status: newStatus })
       });
-      alert(approved ? 'Screening verified (Moved to Interview)' : 'Screening rejected');
       fetchCandidates();
-      fetchScreeningData();
     } catch (e) {
-      alert('Error verifying screening');
+      console.error("Failed to update status", e);
+      setLocalStatus(normalizeStatus(candidate.status)); 
     }
   };
 
+  const handleSaveNotes = async () => {
+    setIsSaving(true);
+    try {
+      await fetch(`/api/applications/${candidate.id}/status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notes: notes }) 
+      });
+      fetchCandidates(); 
+    } catch (e) {
+      console.error("Failed to save notes", e);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const candidateFullName = `${candidate.firstName || ""} ${candidate.lastName || ""}`.trim() || "Unknown Candidate";
+  const initials = candidateFullName.substring(0, 2).toUpperCase();
+
+  const experience = candidate.years_of_experience || candidate.yearsOfExperience;
+  const niche = candidate.niche || candidate.niches;
+  const linkedin = candidate.linkedinUrl || candidate.linkedin_url;
+  const resume = candidate.resumeUrl || candidate.resume_url;
+  const video = candidate.videoPitchUrl || candidate.video_pitch_url;
+  
+  const phone = candidate.phone || candidate.phone_number;
+  const location = candidate.city || candidate.location || candidate.city_state;
+  
+  let screeningData: any = null;
+  if (candidate.screening_data || candidate.screeningData) {
+    const raw = candidate.screening_data || candidate.screeningData;
+    if (typeof raw === 'string') {
+      try { screeningData = JSON.parse(raw); } catch(e) {}
+    } else {
+      screeningData = raw;
+    }
+  }
+
   return (
-    <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+    <div className={cn(
+      "border rounded-2xl transition-all duration-300",
+      expanded ? `shadow-lg ${config.shadow} ${config.border} bg-white` : `bg-white hover:shadow-md border-slate-200`
+    )}>
+      
+      {/* Header */}
       <div 
-        className="p-4 flex justify-between items-center cursor-pointer hover:bg-slate-50 transition-colors"
+        className={cn("p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between cursor-pointer gap-4 rounded-2xl transition-colors", 
+          !expanded && `hover:${config.bg}`
+        )}
         onClick={() => setExpanded(!expanded)}
       >
-        <div>
-          <div className="font-bold text-slate-900">{candidate.firstName} {candidate.lastName}</div>
-          <div className="text-xs text-slate-500">{candidate.email} • Status: <span className="font-semibold text-blue-600">{candidate.status}</span></div>
+        <div className="flex flex-col sm:flex-row sm:items-center gap-5 w-full sm:w-auto">
+          <div className="flex items-center gap-4">
+            <div className={cn("w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg shrink-0 shadow-sm border", config.badge)}>
+              {initials}
+            </div>
+            <div>
+              <div className="font-extrabold text-slate-900 mb-0.5 leading-tight">{candidateFullName}</div>
+              <div className="text-sm font-medium text-slate-500">{candidate.email}</div>
+            </div>
+          </div>
+          
+          <div className="hidden md:flex items-center gap-4 border-l border-slate-200 pl-4 ml-2">
+            {phone && (
+              <div className="flex items-center gap-1.5 text-sm text-slate-600 font-medium">
+                <Phone className="w-3.5 h-3.5 text-slate-400" /> {phone}
+              </div>
+            )}
+            {location && (
+              <div className="flex items-center gap-1.5 text-sm text-slate-600 font-medium">
+                <MapPin className="w-3.5 h-3.5 text-slate-400" /> {location}
+              </div>
+            )}
+          </div>
         </div>
-        <div className="text-slate-400">
-           {expanded ? <ChevronUp className="w-5 h-5"/> : <ChevronDown className="w-5 h-5" />}
+
+        <div className="flex items-center gap-4 justify-between sm:justify-end border-t sm:border-none pt-4 sm:pt-0 border-slate-100">
+          <div className={cn("px-4 py-1.5 rounded-full border text-xs font-bold uppercase tracking-wider", config.badge)}>
+            {localStatus}
+          </div>
+          <div className={cn("w-8 h-8 rounded-full flex items-center justify-center transition-colors shrink-0", 
+            expanded ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-400"
+          )}>
+             {expanded ? <ChevronUp className="w-4 h-4"/> : <ChevronDown className="w-4 h-4" />}
+          </div>
         </div>
       </div>
       
+      {/* Expanded Content */}
       <AnimatePresence>
         {expanded && (
           <motion.div 
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            className="border-t border-slate-100 bg-slate-50/50"
+            className="overflow-hidden border-t border-slate-100"
           >
-            <div className="p-6">
-               {/* Stepper */}
-               <div className="relative max-w-2xl mx-auto mb-10">
-                  <div className="absolute left-0 right-0 top-1/2 h-0.5 bg-slate-200 -z-10 transform -translate-y-1/2 rounded-full"></div>
-                  <div
-                    className="absolute left-0 top-1/2 h-0.5 -z-10 transform -translate-y-1/2 rounded-full transition-all duration-500 bg-blue-600"
-                    style={{ width: `${(currentStageIndex / (STAGES.length - 1)) * 100}%` }}
-                  ></div>
-                  <div className="flex justify-between items-center relative z-0">
-                    {STAGES.map((stage, i) => {
-                       const isClickable = i <= currentStageIndex;
-                       return (
-                      <div key={i} className="flex flex-col items-center gap-2 w-24">
-                        <button
-                          disabled={!isClickable}
-                          onClick={() => setSelectedStage(stage)}
-                          className={cn(
-                            "w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-all shadow-sm cursor-pointer disabled:cursor-not-allowed disabled:opacity-70 outline-none",
-                            displayedStageIndex === i ? "ring-4 ring-blue-200 scale-110" : "",
-                            currentStageIndex > i ? "bg-blue-600 text-white" : 
-                            currentStageIndex === i ? "bg-blue-600 text-white" : 
-                            "bg-white border-2 border-slate-200 text-slate-400"
-                          )}
-                        >
-                          {currentStageIndex > i ? "✓" : i + 1}
-                        </button>
-                        <div className={cn("text-[10px] font-bold uppercase tracking-wide text-center transition-colors", 
-                          displayedStageIndex === i ? "text-blue-800" : currentStageIndex >= i ? "text-blue-600" : "text-slate-400"
-                        )}>
-                          {stage}
-                        </div>
+            <div className="p-6 sm:p-8 bg-slate-50/50 flex flex-col lg:flex-row gap-8">
+              
+              {/* ЛЕВАЯ КОЛОНКА */}
+              <div className="flex-1 space-y-6">
+                
+                <div className="md:hidden flex flex-col gap-2 pb-4 border-b border-slate-200">
+                  <h3 className="text-sm font-extrabold text-slate-900 uppercase tracking-widest mb-1">Contact Details</h3>
+                  {phone && <div className="flex items-center gap-2 text-sm text-slate-700 font-medium"><Phone className="w-4 h-4 text-slate-400" /> {phone}</div>}
+                  {location && <div className="flex items-center gap-2 text-sm text-slate-700 font-medium"><MapPin className="w-4 h-4 text-slate-400" /> {location}</div>}
+                </div>
+
+                <h3 className="text-sm font-extrabold text-slate-900 uppercase tracking-widest border-b border-slate-200 pb-2">
+                  Professional Data
+                </h3>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {(experience || niche) && (
+                    <div className="p-4 bg-white border border-slate-200 rounded-xl shadow-sm">
+                      <div className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">
+                        <Briefcase className="w-3.5 h-3.5" /> Experience
                       </div>
-                    )})}
+                      {experience && <div className="text-sm font-bold text-slate-900">{experience}</div>}
+                      {niche && <div className="text-xs font-medium text-slate-500 mt-1">Niche: {niche}</div>}
+                    </div>
+                  )}
+
+                  {linkedin && (
+                    <div className="p-4 bg-white border border-slate-200 rounded-xl shadow-sm flex flex-col justify-between">
+                      <div className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">
+                        <Globe className="w-3.5 h-3.5" /> LinkedIn
+                      </div>
+                      <a href={linkedin} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-sm font-bold text-blue-600 hover:text-blue-700 w-fit">
+                        <LinkIcon className="w-3.5 h-3.5" /> Open Profile
+                      </a>
+                    </div>
+                  )}
+
+                  {resume && (
+                    <div className="p-4 bg-white border border-slate-200 rounded-xl shadow-sm flex flex-col justify-between">
+                      <div className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">
+                        <FileText className="w-3.5 h-3.5" /> Resume / CV
+                      </div>
+                      <a href={resume} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-sm font-bold text-slate-700 hover:text-slate-900 w-fit">
+                        <FileText className="w-3.5 h-3.5" /> View Document
+                      </a>
+                    </div>
+                  )}
+
+                  {video && (
+                    <div className="p-4 bg-white border border-rose-100 rounded-xl shadow-sm flex flex-col justify-between">
+                      <div className="flex items-center gap-2 text-xs font-bold text-rose-400 uppercase tracking-widest mb-2">
+                        <PlayCircle className="w-3.5 h-3.5" /> Video Pitch
+                      </div>
+                      <a href={video} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-sm font-bold text-rose-600 hover:text-rose-700 w-fit">
+                        <PlayCircle className="w-3.5 h-3.5" /> Watch Video
+                      </a>
+                    </div>
+                  )}
+                </div>
+
+                {screeningData && Object.keys(screeningData).length > 0 && (
+                  <div className="mt-6">
+                    <h3 className="flex items-center gap-2 text-sm font-extrabold text-slate-900 uppercase tracking-widest border-b border-slate-200 pb-2 mb-4">
+                      <ClipboardList className="w-4 h-4 text-slate-400" /> Screening Answers
+                    </h3>
+                    <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-4">
+                      {Object.entries(screeningData).map(([key, value]) => (
+                        <div key={key} className="border-b border-slate-100 last:border-0 pb-3 last:pb-0">
+                          <div className="text-xs font-bold text-slate-400 uppercase mb-1">{key.replace(/_/g, ' ')}</div>
+                          <div className="text-sm font-medium text-slate-900">{String(value)}</div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-               </div>
+                )}
+                
+              </div>
 
-               {/* Stage Content */}
-               <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
-                  {activeStage === 'Applied' && (
-                    <div className="space-y-4">
-                       <h3 className="font-bold text-lg mb-2 text-slate-800">Application Profile Verification</h3>
-                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          
-                          <div className="p-4 border border-slate-200 rounded-xl">
-                            <div className="flex justify-between items-start mb-2">
-                              <div className="text-xs text-slate-500 font-bold uppercase tracking-wide">Experience</div>
-                              <button 
-                                onClick={() => handleVerifyField('experience', !localCandidate.isExperienceVerified)} 
-                                className={cn("text-xs font-bold px-2 py-1 rounded-full flex items-center gap-1 transition-colors", localCandidate.isExperienceVerified ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-500 hover:bg-slate-200")}
-                              >
-                                {localCandidate.isExperienceVerified ? <><CheckCircle2 className="w-3 h-3"/> Verified</> : "Mark as Verified"}
-                              </button>
-                            </div>
-                            <div className="text-sm font-medium">{localCandidate.salesType || localCandidate.yearsOfExperience} / {localCandidate.niche || 'N/A'} / {localCandidate.averageCheck || 'N/A'}</div>
-                          </div>
+              {/* ПРАВАЯ КОЛОНКА: CRM */}
+              <div className="w-full lg:w-80 flex flex-col gap-6">
+                <div>
+                  <h3 className="text-sm font-extrabold text-slate-900 uppercase tracking-widest border-b border-slate-200 pb-2 mb-4">
+                    Pipeline Stage
+                  </h3>
+                  <div className="flex flex-col gap-2">
+                    {AVAILABLE_STATUSES.map((status) => (
+                      <button
+                        key={status}
+                        onClick={() => handleStatusChange(status)}
+                        className={cn(
+                          "w-full text-left px-4 py-2.5 rounded-xl text-sm font-bold transition-all border",
+                          localStatus === status 
+                            ? STATUS_CONFIG[status].badge
+                            : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300"
+                        )}
+                      >
+                        {status}
+                      </button>
+                    ))}
+                  </div>
+                </div>
 
-                          <div className="p-4 border border-slate-200 rounded-xl">
-                            <div className="flex justify-between items-start mb-2">
-                              <div className="text-xs text-slate-500 font-bold uppercase tracking-wide">LinkedIn</div>
-                              <button 
-                                onClick={() => handleVerifyField('linkedin', !localCandidate.isLinkedinVerified)} 
-                                className={cn("text-xs font-bold px-2 py-1 rounded-full flex items-center gap-1 transition-colors", localCandidate.isLinkedinVerified ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-500 hover:bg-slate-200")}
-                              >
-                                {localCandidate.isLinkedinVerified ? <><CheckCircle2 className="w-3 h-3"/> Verified</> : "Mark as Verified"}
-                              </button>
-                            </div>
-                            {localCandidate.linkedinUrl || localCandidate.linkedin_url ? <a href={localCandidate.linkedinUrl || localCandidate.linkedin_url} target="_blank" className="text-sm font-bold text-blue-600 hover:underline">Open Profile</a> : <span className="text-sm text-slate-400">Not provided</span>}
-                          </div>
+                <div className="flex-1 flex flex-col">
+                  <h3 className="flex items-center gap-2 text-sm font-extrabold text-slate-900 uppercase tracking-widest border-b border-slate-200 pb-2 mb-4">
+                    <StickyNote className="w-4 h-4 text-slate-400" /> Private Notes
+                  </h3>
+                  <textarea
+                    placeholder="Write your thoughts about this candidate..."
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    className="w-full flex-1 min-h-[120px] p-3 text-sm bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all resize-none text-slate-700"
+                  />
+                  <button
+                    onClick={handleSaveNotes}
+                    disabled={isSaving}
+                    className="mt-3 w-full bg-slate-900 hover:bg-slate-800 text-white text-sm font-bold py-2.5 rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    {isSaving ? "Saving..." : <><Check className="w-4 h-4"/> Save Note</>}
+                  </button>
+                </div>
+              </div>
 
-                          <div className="p-4 border border-slate-200 rounded-xl">
-                            <div className="flex justify-between items-start mb-2">
-                              <div className="text-xs text-slate-500 font-bold uppercase tracking-wide">Resume</div>
-                              <button 
-                                onClick={() => handleVerifyField('resume', !localCandidate.isResumeVerified)} 
-                                className={cn("text-xs font-bold px-2 py-1 rounded-full flex items-center gap-1 transition-colors", localCandidate.isResumeVerified ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-500 hover:bg-slate-200")}
-                              >
-                                {localCandidate.isResumeVerified ? <><CheckCircle2 className="w-3 h-3"/> Verified</> : "Mark as Verified"}
-                              </button>
-                            </div>
-                            {localCandidate.resumeUrl || localCandidate.resume_url ? <a href={localCandidate.resumeUrl || localCandidate.resume_url} target="_blank" className="text-sm font-bold text-blue-600 hover:underline">View Document</a> : <span className="text-sm text-slate-400">Not provided</span>}
-                          </div>
-
-                          <div className="p-4 border border-slate-200 rounded-xl">
-                            <div className="flex justify-between items-start mb-2">
-                              <div className="text-xs text-slate-500 font-bold uppercase tracking-wide">Video Pitch</div>
-                              <button 
-                                onClick={() => handleVerifyField('video_pitch', !localCandidate.isVideoVerified, localCandidate.englishLevel)} 
-                                className={cn("text-xs font-bold px-2 py-1 rounded-full flex items-center gap-1 transition-colors", localCandidate.isVideoVerified ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-500 hover:bg-slate-200")}
-                              >
-                                {localCandidate.isVideoVerified ? <><CheckCircle2 className="w-3 h-3"/> Verified</> : "Mark as Verified"}
-                              </button>
-                            </div>
-                            <a href={localCandidate.videoPitchUrl || localCandidate.video_pitch_url} target="_blank" className="text-sm font-bold text-blue-600 hover:underline flex items-center gap-1 mb-3"><LinkIcon className="w-4 h-4" /> Watch</a>
-                            
-                            <div className="mt-2 pt-3 border-t border-slate-100">
-                               <label className="text-xs font-bold text-slate-500 block mb-1">Assess English Level</label>
-                               <select 
-                                 className="w-full border border-slate-200 rounded text-sm p-1.5 focus:border-blue-500 outline-none"
-                                 value={localCandidate.englishLevel || ''}
-                                 onChange={(e) => handleVerifyField('video_pitch', localCandidate.isVideoVerified, e.target.value)}
-                               >
-                                 <option value="" disabled>Select level...</option>
-                                 <option value="Basic">Basic</option>
-                                 <option value="Advanced">Advanced</option>
-                                 <option value="Native">Native</option>
-                               </select>
-                            </div>
-                          </div>
-
-                       </div>
-                       {candidate.status === 'Applied' && (
-                         <div className="mt-6 pt-6 border-t border-slate-100 flex gap-4">
-                            <button onClick={async () => {
-                              // NextAuth automatically includes session cookies
-                              await fetch('/api/applications/' + candidate.id + '/status', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ status: 'Screening' })
-                              });
-                              fetchCandidates();
-                            }} className="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors">
-                               Initiate Screening
-                            </button>
-                         </div>
-                       )}
-                    </div>
-                  )}
-
-                  {activeStage === 'Screening' && (
-                    <div>
-                       <h3 className="font-bold text-lg mb-4 text-slate-800">Screening Matchmaking</h3>
-                       {!candidate?.screening_data && !candidate?.screeningData ? (
-                          <div className="text-sm text-slate-500">Waiting for candidate to submit screening profile...</div>
-                       ) : (
-                          <div className="space-y-6">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                               <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 md:col-span-2">
-                                  <div className="text-sm text-slate-900">
-                                    Candidate has submitted screening data. Review and verify to move forward.
-                                  </div>
-                               </div>
-                            </div>
-                            
-                            {candidate.status === 'Screening' && (
-                               <div className="flex gap-4 pt-4 border-t">
-                                  <button onClick={() => handleVerifyScreening(true)} className="flex-1 bg-green-600 hover:bg-green-700 transition-colors text-white font-bold py-3 rounded-xl shadow-lg">Verify & Match (Move to Interview)</button>
-                                  <button onClick={() => handleVerifyScreening(false)} className="flex-1 bg-red-600 hover:bg-red-700 transition-colors text-white font-bold py-3 rounded-xl shadow-lg">Reject Profile</button>
-                               </div>
-                            )}
-                          </div>
-                       )}
-                    </div>
-                  )}
-                  
-                  {activeStage === 'Interview' && (
-                    <div className="text-center py-8">
-                       <h3 className="font-bold text-lg mb-2 text-slate-800">Interview Stage</h3>
-                       <p className="text-sm text-slate-500 mb-4">Candidate has been approved for interview.</p>
-                       {candidate.interviewUrl ? (
-                         <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 inline-block">
-                           <div className="text-xs text-slate-500 font-bold uppercase tracking-wide mb-1">Provided Calendly Link</div>
-                           <a href={candidate.interviewUrl} target="_blank" className="text-sm font-bold text-blue-600 hover:underline">{candidate.interviewUrl}</a>
-                         </div>
-                       ) : null}
-                    </div>
-                  )}
-                  {activeStage === 'Offer' && (
-                    <div className="text-center py-8">
-                       <h3 className="font-bold text-lg mb-2 text-slate-800">Offer Stage</h3>
-                    </div>
-                  )}
-                  {activeStage === 'Employee' && (
-                    <div className="text-center py-8">
-                       <h3 className="font-bold text-lg mb-2 text-slate-800">Hired</h3>
-                    </div>
-                  )}
-               </div>
             </div>
           </motion.div>
         )}

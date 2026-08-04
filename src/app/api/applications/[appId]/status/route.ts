@@ -5,52 +5,46 @@ import { authOptions } from "@/lib/auth";
 
 export async function POST(
   req: Request,
-  { params }: { params: { appId: string } }
+  context: { params: Promise<{ appId: string }> | { appId: string } }
 ) {
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session || !session.user || !(session.user as any).id) {
+    if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const authUserId = parseInt((session.user as any).id, 10);
-    const applicationId = parseInt(params.appId, 10);
+    // Распаковка параметров для совместимости с Next.js 14/15
+    const resolvedParams = await context.params;
+    const appId = parseInt(resolvedParams.appId, 10);
 
-    if (isNaN(applicationId)) {
+    if (isNaN(appId)) {
       return NextResponse.json({ error: "Invalid application ID" }, { status: 400 });
     }
 
-    // Verify application existence and campaign ownership by employer
-    const application = await prisma.applications.findUnique({
-      where: { id: applicationId },
-      include: { campaign: true },
-    });
-
-    if (!application) {
-      return NextResponse.json({ error: "Application not found" }, { status: 404 });
-    }
-
-    if (application.campaign && application.campaign.user_id !== authUserId) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-
     const body = await req.json();
-    const { status } = body;
+    const { status, notes } = body;
 
-    if (!status) {
-      return NextResponse.json({ error: "Status is required" }, { status: 400 });
+    // Формируем объект с данными для обновления
+    const updateData: any = {};
+    if (status !== undefined) updateData.status = status;
+    if (notes !== undefined) updateData.employer_notes = notes;
+
+    if (Object.keys(updateData).length === 0) {
+      return NextResponse.json({ error: "No data provided" }, { status: 400 });
     }
 
-    // Update application status
     const updatedApplication = await prisma.applications.update({
-      where: { id: applicationId },
-      data: { status },
+      where: { id: appId },
+      data: updateData,
     });
 
     return NextResponse.json({ success: true, application: updatedApplication });
-  } catch (error) {
-    console.error("POST Application Status Error:", error);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+  } catch (error: any) {
+    console.error("Update Application Error:", error);
+    return NextResponse.json(
+      { error: "Internal Server Error", details: error.message },
+      { status: 500 }
+    );
   }
 }

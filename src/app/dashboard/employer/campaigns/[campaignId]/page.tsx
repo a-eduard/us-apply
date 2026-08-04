@@ -1,9 +1,11 @@
 import CampaignDetailClient from "./CampaignDetailClient";
 
-export default function CampaignDetailPage({
+export default async function CampaignDetailPage({
   params,
 }: {
-  params: { campaignId: string };
+  params: Promise<{ campaignId: string }>;
 }) {
-  return <CampaignDetailClient campaignId={params.campaignId} />;
+  const resolvedParams = await params;
+  
+  return <CampaignDetailClient campaignId={resolvedParams.campaignId} />;
 }

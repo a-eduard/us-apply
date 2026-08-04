@@ -1,25 +1,21 @@
+export const dynamic = "force-dynamic";
+
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 
-type Context = {
-  params: Promise<{ campaignId: string }>;
-};
-
-// GET - Fetch campaign details
-export async function GET(req: Request, context: Context) {
+export async function GET(req: Request, context: any) {
   try {
-    const { campaignId: paramId } = await context.params;
     const session = await getServerSession(authOptions);
 
-    if (!session || !session.user || !(session.user as any).id) {
+    if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const authUserId = parseInt((session.user as any).id, 10);
-    const campaignId = parseInt(paramId, 10);
-    
+    const resolvedParams = await context.params;
+    const campaignId = parseInt(resolvedParams?.campaignId, 10);
+
     if (isNaN(campaignId)) {
       return NextResponse.json({ error: "Invalid campaign ID" }, { status: 400 });
     }
@@ -29,17 +25,8 @@ export async function GET(req: Request, context: Context) {
       include: {
         applications: {
           include: {
-            users: {
-              select: {
-                id: true,
-                first_name: true,
-                last_name: true,
-                email: true,
-                phone: true,
-              }
-            }
-          },
-          orderBy: { created_at: "desc" }
+            users: true // <-- ИСПРАВЛЕНИЕ: Теперь забираем ВСЕ поля пользователя
+          }
         }
       }
     });
@@ -48,125 +35,97 @@ export async function GET(req: Request, context: Context) {
       return NextResponse.json({ error: "Campaign not found" }, { status: 404 });
     }
 
-    if (campaign.user_id !== authUserId) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-
     const formattedCampaign = {
       ...campaign,
-      applications: campaign.applications.map((app: any) => ({
-        ...app,
-        firstName: app.users?.first_name || "Unknown",
-        lastName: app.users?.last_name || "",
-        email: app.users?.email || "",
-        phone: app.users?.phone || "",
-        users: undefined 
-      }))
+      applications: campaign.applications
+        .map((app: any) => {
+          // ИСПРАВЛЕНИЕ: Красиво форматируем ниши, убирая скобки и кавычки массива
+          let parsedNiche = app.users?.niches || app.niche || "";
+          if (typeof parsedNiche === "string" && parsedNiche.startsWith("[")) {
+            try {
+              parsedNiche = JSON.parse(parsedNiche).join(", ");
+            } catch (e) {}
+          }
+
+          return {
+            ...app,
+            firstName: app.users?.first_name || "Unknown",
+            lastName: app.users?.last_name || "",
+            email: app.users?.email || "",
+            phone: app.users?.phone || "",
+            // ИСПРАВЛЕНИЕ: Прокидываем все файлы и ссылки во фронтенд
+            linkedinUrl: app.users?.linkedin_url || "",
+            resumeUrl: app.users?.resume_url || "",
+            videoPitchUrl: app.users?.video_pitch_url || "",
+            yearsOfExperience: app.users?.years_of_experience || "",
+            niche: parsedNiche,
+            users: undefined 
+          };
+        })
+        .sort((a: any, b: any) => {
+          const dateA = new Date(a.created_at || a.createdAt || 0).getTime();
+          const dateB = new Date(b.created_at || b.createdAt || 0).getTime();
+          return dateB - dateA;
+        })
     };
 
     return NextResponse.json(formattedCampaign);
-  } catch (error) {
+  } catch (error: any) {
     console.error("GET Campaign Details Error:", error);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Internal Server Error", details: error.message || error.toString() }, 
+      { status: 500 }
+    );
   }
 }
 
-// DELETE - Remove a campaign
-export async function DELETE(req: Request, context: Context) {
+export async function DELETE(req: Request, context: any) {
   try {
-    const { campaignId: paramId } = await context.params;
     const session = await getServerSession(authOptions);
+    if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    if (!session || !session.user || !(session.user as any).id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const resolvedParams = await context.params;
+    const campaignId = parseInt(resolvedParams?.campaignId, 10);
+    if (isNaN(campaignId)) return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
 
-    const authUserId = parseInt((session.user as any).id, 10);
-    const campaignId = parseInt(paramId, 10);
+    await prisma.applications.deleteMany({ where: { campaign_id: campaignId } });
+    await prisma.campaigns.delete({ where: { id: campaignId } });
 
-    if (isNaN(campaignId)) {
-      return NextResponse.json({ error: "Invalid campaign ID" }, { status: 400 });
-    }
-
-    const campaign = await prisma.campaigns.findUnique({
-      where: { id: campaignId }
-    });
-
-    if (!campaign) {
-      return NextResponse.json({ error: "Campaign not found" }, { status: 404 });
-    }
-
-    if (campaign.user_id !== authUserId) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-
-    // Delete associated applications first to satisfy foreign key constraints
-    await prisma.applications.deleteMany({
-      where: { campaign_id: campaignId }
-    });
-
-    // Delete the campaign
-    await prisma.campaigns.delete({
-      where: { id: campaignId }
-    });
-
-    return NextResponse.json({ success: true, message: "Campaign deleted successfully" });
-  } catch (error) {
-    console.error("DELETE Campaign Error:", error);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    return NextResponse.json({ success: true });
+  } catch (error: any) {
+    return NextResponse.json({ error: "Server Error", details: error.message }, { status: 500 });
   }
 }
 
-// PATCH - Update a campaign
-export async function PATCH(req: Request, context: Context) {
+export async function PATCH(req: Request, context: any) {
   try {
-    const { campaignId: paramId } = await context.params;
     const session = await getServerSession(authOptions);
+    if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    if (!session || !session.user || !(session.user as any).id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const authUserId = parseInt((session.user as any).id, 10);
-    const campaignId = parseInt(paramId, 10);
-    
-    if (isNaN(campaignId)) {
-      return NextResponse.json({ error: "Invalid campaign ID" }, { status: 400 });
-    }
-
-    const campaign = await prisma.campaigns.findUnique({
-      where: { id: campaignId }
-    });
-
-    if (!campaign || campaign.user_id !== authUserId) {
-      return NextResponse.json({ error: "Campaign not found or forbidden" }, { status: 403 });
-    }
+    const resolvedParams = await context.params;
+    const campaignId = parseInt(resolvedParams?.campaignId, 10);
+    if (isNaN(campaignId)) return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
 
     const body = await req.json();
-    const { 
-      title, companyName, description, requirements, niche, salesType, 
-      baseSalary, ote, commission, logoUrl 
-    } = body;
-
+    
     const updatedCampaign = await prisma.campaigns.update({
       where: { id: campaignId },
       data: {
-        title: title !== undefined ? title : campaign.title,
-        company_name: companyName !== undefined ? companyName : campaign.company_name,
-        description: description !== undefined ? description : campaign.description,
-        requirements: requirements !== undefined ? requirements : campaign.requirements,
-        niche: niche !== undefined ? niche : campaign.niche,
-        sales_type: salesType !== undefined ? salesType : campaign.sales_type,
-        base_salary: baseSalary !== undefined ? baseSalary : campaign.base_salary,
-        ote: ote !== undefined ? ote : campaign.ote,
-        commission: commission !== undefined ? commission : campaign.commission,
-        logo_url: logoUrl !== undefined ? logoUrl : campaign.logo_url,
+        title: body.title,
+        company_name: body.companyName,
+        description: body.description,
+        requirements: body.requirements,
+        niche: body.niche,
+        sales_type: body.salesType,
+        base_salary: body.baseSalary,
+        ote: body.ote,
+        commission: body.commission,
+        logo_url: body.logoUrl,
       }
     });
 
     return NextResponse.json(updatedCampaign);
-  } catch (error) {
-    console.error("PATCH Campaign Error:", error);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+  } catch (error: any) {
+    return NextResponse.json({ error: "Server Error", details: error.message }, { status: 500 });
   }
 }

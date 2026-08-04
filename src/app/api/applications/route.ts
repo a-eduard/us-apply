@@ -36,12 +36,9 @@ export async function POST(req: Request) {
 
     const candidateFullName = `${firstName || ""} ${lastName || ""}`.trim() || session.user.name || "Candidate";
 
-    // Получаем кампанию для отправки писем
     const campaign = await prisma.campaigns.findUnique({
       where: { id: campaign_id },
-      include: {
-        users: true 
-      }
+      include: { users: true }
     });
 
     const serializedNiches = Array.isArray(niches) ? JSON.stringify(niches) : niches;
@@ -57,12 +54,12 @@ export async function POST(req: Request) {
       niche: serializedNiches || undefined,
     };
 
+    // 1. СОХРАНЯЕМ ИЛИ ОБНОВЛЯЕМ ЗАЯВКУ
     const existingApp = await prisma.applications.findFirst({
       where: { user_id: authUserId, campaign_id: campaign_id }
     });
 
     if (existingApp) {
-      // Обновляем черновик до полноценной заявки
       await prisma.applications.update({
         where: { id: existingApp.id },
         data: {
@@ -71,7 +68,6 @@ export async function POST(req: Request) {
         }
       });
     } else {
-      // Создаем новую заявку
       await prisma.applications.create({
         data: {
           user_id: authUserId,
@@ -81,7 +77,23 @@ export async function POST(req: Request) {
       });
     }
 
-    // 3. Отправка писем в фоне (БЕЗ await, чтобы не блокировать ответ пользователю при долгой отправке)
+    // 2. ОБНОВЛЯЕМ ГЛОБАЛЬНЫЙ ПРОФИЛЬ КАНДИДАТА
+    await prisma.users.update({
+      where: { id: authUserId },
+      data: {
+        first_name: firstName || undefined,
+        last_name: lastName || undefined,
+        city: city || undefined,
+        state: state || undefined,
+        linkedin_url: linkedinUrl || undefined,
+        video_pitch_url: videoPitchUrl || undefined,
+        resume_url: resumeUrl || undefined,
+        years_of_experience: yearsOfExperience || undefined,
+        niches: serializedNiches || undefined,
+      }
+    });
+
+    // 3. ОТПРАВЛЯЕМ УВЕДОМЛЕНИЯ
     if (campaign) {
       const campaignTitle = campaign.title || "Job Position";
       
@@ -101,7 +113,6 @@ export async function POST(req: Request) {
       }
     }
 
-    // Мгновенный ответ пользователю
     return NextResponse.json({ success: true });
   } catch (error: any) {
     console.error("Application Submission Error EXACT:", error.message || error);

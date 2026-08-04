@@ -3,6 +3,7 @@
 import React, { useState, forwardRef, useImperativeHandle, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useSession } from 'next-auth/react';
 import { StepTwoSchema } from '@/schemas/wizard';
 import { cn } from '@/lib/utils';
 import { Upload, Loader2, Plus, X } from 'lucide-react';
@@ -23,7 +24,9 @@ const StepTwo = forwardRef(function StepTwo({
   campaignId: string, 
   onChange?: (data: any) => void 
 }, ref) {
+  const { data: session } = useSession();
   const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
   
   // States for Custom Niche
   const [showCustomInput, setShowCustomInput] = useState(false);
@@ -55,8 +58,8 @@ const StepTwo = forwardRef(function StepTwo({
       if (isValid) {
         return new Promise(resolve => {
           handleSubmit(async (data) => {
-            await onSubmit(data);
-            resolve(true);
+            const success = await onSubmit(data);
+            resolve(success);
           })();
         });
       } else {
@@ -74,10 +77,8 @@ const StepTwo = forwardRef(function StepTwo({
     setNicheWarning(false);
     
     if (niches.includes(niche)) {
-      // Remove niche
       setValue('niches', niches.filter((n: string) => n !== niche), { shouldValidate: true });
     } else {
-      // Add niche
       if (niches.length >= 3) {
         setNicheWarning(true);
         setTimeout(() => setNicheWarning(false), 3000);
@@ -110,28 +111,75 @@ const StepTwo = forwardRef(function StepTwo({
     setShowCustomInput(false);
   };
 
-  const onSubmit = async (data: any) => {
+  const onSubmit = async (data: any): Promise<boolean> => {
     setIsSaving(true);
+    setSaveError('');
     try {
-      const draftPayload = {
-        campaign_id: parseInt(campaignId, 10),
-        yearsOfExperience: data.yearsOfExperience,
-        niches: data.niches,
-        linkedinUrl: data.linkedinUrl,
-      };
+      let finalResumeUrl = defaultValues?.resumeUrl || '';
 
-      await fetch('/api/applications/draft', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(draftPayload)
-      });
-    } catch (error) {
-      console.error("Failed to save Step 2 draft:", error);
+      // 1. ЗАГРУЖАЕМ РЕЗЮМЕ НА СЕРВЕР
+      if (data.resumeFile instanceof File) {
+        const fileData = new FormData();
+        fileData.append("file", data.resumeFile);
+        fileData.append("isVideo", "false");
+        
+        const uploadRes = await fetch('/api/upload', { method: 'POST', body: fileData });
+        if (uploadRes.ok) {
+          const uploadData = await uploadRes.json();
+          finalResumeUrl = uploadData.publicUrl;
+        } else {
+          throw new Error("Failed to upload resume file");
+        }
+      }
+
+      const userId = session?.user ? (session.user as any).id : null;
+
+      // 2. ОБНОВЛЯЕМ ПРОФИЛЬ КАНДИДАТА НАПРЯМУЮ
+      if (userId) {
+        const profileRes = await fetch(`/api/users/${userId}/profile`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            years_of_experience: data.yearsOfExperience,
+            niches: data.niches,
+            linkedin_url: data.linkedinUrl,
+            resume_url: finalResumeUrl || undefined
+          })
+        });
+        if (!profileRes.ok) {
+           const errData = await profileRes.json();
+           throw new Error(errData.error || "Failed to update profile data");
+        }
+      }
+
+      // 3. СОХРАНЯЕМ ЧЕРНОВИК ЗАЯВКИ (ТОЛЬКО ЕСЛИ ЕСТЬ КАМПАНИЯ)
+      if (campaignId) {
+        const draftPayload = {
+          campaign_id: parseInt(campaignId, 10),
+          yearsOfExperience: data.yearsOfExperience,
+          niches: data.niches,
+          linkedinUrl: data.linkedinUrl,
+          resumeUrl: finalResumeUrl || undefined
+        };
+
+        const draftRes = await fetch('/api/applications/draft', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(draftPayload)
+        });
+        if (!draftRes.ok) {
+           throw new Error("Failed to save application draft");
+        }
+      }
+
+      onNext({ ...data, resumeUrl: finalResumeUrl, resumeFile: null });
+      return true;
+    } catch (error: any) {
+      console.error("Failed to save Step 2:", error);
+      setSaveError(error.message || "A database error occurred. Please try again.");
+      return false; // НЕ ПЕРЕХОДИМ НА СЛЕДУЮЩИЙ ШАГ ПРИ ОШИБКЕ
     } finally {
       setIsSaving(false);
-      onNext(data);
     }
   };
 
@@ -159,11 +207,17 @@ const StepTwo = forwardRef(function StepTwo({
     }
   };
 
-  // Create a combined list of niches to display (Defaults + selected customs)
   const displayNiches = Array.from(new Set([...DEFAULT_NICHES, ...niches]));
 
   return (
     <form onSubmit={handleSubmit(onSubmit, onError)} className="space-y-8 bg-white p-6 sm:p-8 rounded-2xl shadow-sm border border-slate-200 max-w-2xl mx-auto mt-8">
+      
+      {saveError && (
+        <div className="p-3 bg-red-50 text-red-600 text-sm font-bold rounded-lg border border-red-100 text-center animate-in fade-in">
+          {saveError}
+        </div>
+      )}
+
       {/* Years of Experience */}
       <div className="space-y-2">
         <label className="text-sm font-bold text-slate-700">Years of Experience</label>
@@ -288,9 +342,9 @@ const StepTwo = forwardRef(function StepTwo({
         )}>
           <input 
             type="file" 
-            accept=".pdf"
+            accept=".pdf,.doc,.docx"
             onChange={handleFileChange}
-            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" 
+            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" 
           />
           <Upload className={cn("w-6 h-6 mb-3", errors.resumeFile ? "text-red-400" : "text-slate-400")} />
           {resumeFile ? (
@@ -298,7 +352,7 @@ const StepTwo = forwardRef(function StepTwo({
           ) : (
             <>
               <div className="text-sm font-bold text-slate-900 mb-1">Click or drag file</div>
-              <div className="text-xs text-slate-500 font-medium">PDF up to 5MB</div>
+              <div className="text-xs text-slate-500 font-medium">PDF or DOCX up to 5MB</div>
             </>
           )}
         </div>
@@ -311,9 +365,9 @@ const StepTwo = forwardRef(function StepTwo({
         <button 
           type="submit" 
           disabled={isSaving} 
-          className="w-full flex items-center justify-center bg-blue-600 text-white font-bold py-3.5 rounded-xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/20 active:scale-[0.98] disabled:opacity-70"
+          className="w-full flex items-center justify-center bg-blue-600 text-white font-bold py-3.5 rounded-xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/20 active:scale-[0.98] disabled:opacity-70 gap-2"
         >
-          {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : "Continue"}
+          {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : (campaignId ? "Continue" : "Save & Continue")}
         </button>
       </div>
     </form>

@@ -74,6 +74,7 @@ model applications {
   niches                 String?    @db.LongText
   state                  String?    @db.VarChar(100)
   screening_data         String?    @db.LongText
+  employer_notes         String?    @db.Text
   campaigns              campaigns? @relation(fields: [campaign_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "applications_campaign_id_campaigns_id_fk")
   users                  users?     @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "applications_user_id_users_id_fk")
 

@@ -1,33 +1,28 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth";
 
 export async function PATCH(
   req: Request,
-  { params }: { params: { appId: string } }
+  { params }: { params: Promise<{ appId: string }> }
 ) {
   try {
-    // Basic auth check for transition period
-    const authHeader = req.headers.get("authorization");
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    const session = await getServerSession(authOptions);
+
+    if (!session || !session.user || !(session.user as any).id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const token = authHeader.split(" ")[1];
-    let authUserId: number;
+    const authUserId = parseInt((session.user as any).id, 10);
 
-    try {
-      const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
-      authUserId = payload.userId || payload.id;
-    } catch (e) {
-      return NextResponse.json({ error: "Invalid token" }, { status: 401 });
-    }
-
-    const applicationId = parseInt(params.appId, 10);
+    const resolvedParams = await params;
+    const applicationId = parseInt(resolvedParams.appId, 10);
+    
     if (isNaN(applicationId)) {
       return NextResponse.json({ error: "Invalid application ID" }, { status: 400 });
     }
 
-    // Verify ownership and existence
     const application = await prisma.applications.findUnique({
       where: { id: applicationId },
     });
@@ -43,24 +38,20 @@ export async function PATCH(
     const body = await req.json();
     const { linkedinUrl, resumeUrl, videoPitchUrl, yearsOfExperience, niches } = body;
 
-    // Construct update data dynamically based on what's provided
-    const updateData: any = {};
-    if (linkedinUrl !== undefined) updateData.linkedinUrl = linkedinUrl;
-    if (resumeUrl !== undefined) updateData.resumeUrl = resumeUrl;
-    if (videoPitchUrl !== undefined) updateData.videoPitchUrl = videoPitchUrl;
-    if (yearsOfExperience !== undefined) updateData.yearsOfExperience = yearsOfExperience;
-    if (niches !== undefined) updateData.niches = niches;
+    const serializedNiches = niches && Array.isArray(niches) ? JSON.stringify(niches) : niches;
 
-    // Update the application
+    // Обновляем ТОЛЬКО таблицу applications. 
+    // Это полностью исключает конфликт блокировок таблицы users (Lock wait timeout).
+    const updateDataApp: any = {};
+    if (linkedinUrl !== undefined) updateDataApp.linkedin_url = linkedinUrl;
+    if (resumeUrl !== undefined) updateDataApp.resume_url = resumeUrl;
+    if (videoPitchUrl !== undefined) updateDataApp.video_pitch_url = videoPitchUrl;
+    if (yearsOfExperience !== undefined) updateDataApp.years_of_experience = yearsOfExperience;
+    if (niches !== undefined) updateDataApp.niche = serializedNiches; 
+
     await prisma.applications.update({
       where: { id: applicationId },
-      data: updateData,
-    });
-
-    // Sync the same data to the user's main profile
-    await prisma.users.update({
-      where: { id: authUserId },
-      data: updateData,
+      data: updateDataApp,
     });
 
     return NextResponse.json({ success: true });

@@ -19,6 +19,7 @@ export const ProfileEnrichmentSchema = z.object({
   email: z.string()
     .min(1, "Email is required")
     .email("Please enter a valid email address (e.g., name@example.com)"),
+  password: z.string().optional(), // Added for integrated registration
   city: z.string().trim().min(2, "Please enter your city"),
   state: z.string().trim().min(1, "Please specify your state or country").max(100, "Value is too long"),
 });

@@ -1,5 +1,9 @@
+"use client";
+
 import React from "react";
 import Link from "next/link";
+import { useSession } from "next-auth/react";
+import { Loader2 } from "lucide-react";
 
 interface HeaderProps {
   leftContent?: React.ReactNode;
@@ -14,6 +18,47 @@ export function Header({
   isSticky = true, 
   className = "" 
 }: HeaderProps) {
+  const { data: session, status } = useSession();
+
+  // Умная кнопка авторизации
+  const renderAuthButton = () => {
+    if (status === "loading") {
+      return (
+        <div className="px-6 py-2.5 bg-slate-50 rounded-xl flex items-center justify-center min-w-[100px]">
+          <Loader2 className="w-4 h-4 animate-spin text-slate-400" />
+        </div>
+      );
+    }
+
+    if (status === "authenticated" && session?.user) {
+      // ИСПРАВЛЕНИЕ: Говорим TypeScript, что тут есть поле role
+      const user = session.user as { name?: string | null; email?: string | null; image?: string | null; role?: string };
+      
+      // Определяем маршрут в зависимости от роли
+      const dashboardUrl = user.role === "employer" 
+        ? "/dashboard/employer" 
+        : "/dashboard/candidate";
+        
+      return (
+        <Link 
+          href={dashboardUrl}
+          className="px-5 py-2.5 bg-slate-900 text-white text-sm font-bold rounded-xl hover:bg-slate-800 transition-colors shadow-sm"
+        >
+          Go to Dashboard
+        </Link>
+      );
+    }
+
+    return (
+      <Link 
+        href="/login"
+        className="px-6 py-2.5 bg-slate-900 text-white text-sm font-bold rounded-xl hover:bg-slate-800 transition-colors shadow-sm"
+      >
+        Login
+      </Link>
+    );
+  };
+
   return (
     <nav 
       className={`w-full bg-white px-6 py-4 border-b border-slate-200 ${
@@ -37,9 +82,9 @@ export function Header({
           {leftContent}
         </div>
         
-        {/* Right Side: Page Specific Content (Login Button) */}
+        {/* Right Side: Page Specific Content OR Dynamic Auth Button */}
         <div className="flex items-center gap-4">
-          {rightContent}
+          {rightContent !== undefined ? rightContent : renderAuthButton()}
         </div>
         
       </div>

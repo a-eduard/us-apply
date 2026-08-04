@@ -49,19 +49,26 @@ export default function WizardClient({ initialStep }: WizardClientProps) {
   });
 
   useEffect(() => {
-    if (status === "unauthenticated") {
-      const returnUrl = `/wizard/step-1?campaignId=${campaignId}`;
-      router.push(`/register?callbackUrl=${encodeURIComponent(returnUrl)}`);
-    }
-  }, [status, campaignId, router]);
-
-  useEffect(() => {
     setMaxReachedStep((prev) => Math.max(prev, step));
   }, [step]);
 
+  // ЗАЩИТА: Не даем гостям прыгать сразу на 2 или 3 шаг
+  useEffect(() => {
+    if (status === "unauthenticated" && step > 0) {
+      const query = campaignId ? `?campaignId=${campaignId}` : '';
+      router.replace(`/wizard/step-1${query}`);
+    }
+  }, [status, step, router, campaignId]);
+
   useEffect(() => {
     const fetchDraft = async () => {
-      if (status === "authenticated" && campaignId) {
+      // Если это просто регистрация без кампании, пропускаем черновик
+      if (!campaignId) {
+        setIsDraftLoaded(true);
+        return;
+      }
+
+      if (status === "authenticated") {
         try {
           const res = await fetch(`/api/applications/draft?campaignId=${campaignId}`);
           if (res.ok) {
@@ -83,14 +90,15 @@ export default function WizardClient({ initialStep }: WizardClientProps) {
       }
     };
 
-    if (status === "authenticated") {
+    if (status === "authenticated" || status === "unauthenticated") {
       fetchDraft();
     }
   }, [status, campaignId]);
 
   const handleNext = () => {
     const nextStep = Math.min(step + 1, STEPS.length - 1);
-    router.push(`/wizard/step-${nextStep + 1}?campaignId=${campaignId}`);
+    const query = campaignId ? `?campaignId=${campaignId}` : '';
+    router.push(`/wizard/step-${nextStep + 1}${query}`);
   };
 
   const handleFormDataChange = (data: any) => {
@@ -98,6 +106,14 @@ export default function WizardClient({ initialStep }: WizardClientProps) {
   };
 
   const handleSubmit = async (finalData: any = formData) => {
+    // 1. Если нет кампании (Простая регистрация),
+    // данные в профиль уже сохранились на Шаге 1 и 2. Мы просто перекидываем в Дашборд.
+    if (!campaignId) {
+      router.push('/dashboard/candidate');
+      return;
+    }
+
+    // 2. Если есть кампания - отправляем финальную заявку
     try {
       const res = await fetch('/api/applications', {
         method: 'POST',
@@ -105,7 +121,7 @@ export default function WizardClient({ initialStep }: WizardClientProps) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          campaign_id: campaignId ? parseInt(campaignId, 10) : undefined,
+          campaign_id: parseInt(campaignId, 10),
           application_data: finalData
         }),
       });
@@ -122,7 +138,7 @@ export default function WizardClient({ initialStep }: WizardClientProps) {
     }
   };
 
-  if (status === "loading" || status === "unauthenticated" || (!isDraftLoaded && status === "authenticated")) {
+  if (status === "loading" || (!isDraftLoaded && status === "authenticated")) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
@@ -196,7 +212,8 @@ export default function WizardClient({ initialStep }: WizardClientProps) {
                     }
                     return;
                   }
-                  router.push(`/wizard/step-${i + 1}?campaignId=${campaignId}`);
+                  const query = campaignId ? `?campaignId=${campaignId}` : '';
+                  router.push(`/wizard/step-${i + 1}${query}`);
                 }}
                 className={cn(
                   "flex items-center gap-2.5 focus:outline-none bg-white z-10 px-2", 

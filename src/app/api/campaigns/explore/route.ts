@@ -5,8 +5,7 @@ export async function GET() {
   try {
     const campaigns = await prisma.campaigns.findMany({
       where: {
-        status: "Active",
-        is_public: true,
+        status: "Active", // Точно так же, как на главной странице
       },
       orderBy: { created_at: "desc" },
     });
@@ -14,6 +13,6 @@ export async function GET() {
     return NextResponse.json(campaigns);
   } catch (error) {
     console.error("GET Explore Campaigns Error:", error);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    return NextResponse.json([]);
   }
 }

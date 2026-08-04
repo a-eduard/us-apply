@@ -125,6 +125,7 @@ C:.
 ¦   ¦       CalendlyModal.tsx
 ¦   ¦       CandidateApplicationCard.tsx
 ¦   ¦       EmployerCandidateCard.tsx
+¦   ¦       ProfileSettingsForm.tsx
 ¦   ¦       ScreeningForm.tsx
 ¦   ¦       SmartBlockWrapper.tsx
 ¦   ¦       

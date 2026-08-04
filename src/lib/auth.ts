@@ -6,8 +6,22 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 
+// Вспомогательная функция для retry-запросов к БД
+async function findUserWithRetry(email: string, retries = 3): Promise<any> {
+  for (let i = 0; i < retries; i++) {
+    try {
+      return await prisma.users.findUnique({
+        where: { email },
+      });
+    } catch (err: any) {
+      console.warn(`[Auth] DB attempt ${i + 1} failed. Retrying...`, err?.message || err);
+      if (i === retries - 1) throw err;
+      await new Promise((res) => setTimeout(res, 500 * (i + 1)));
+    }
+  }
+}
+
 export const authOptions: NextAuthOptions = {
-  // Using 'as any' to bypass strict type checking for custom Int ID schema
   adapter: PrismaAdapter(prisma) as any,
   session: {
     strategy: "jwt",
@@ -50,36 +64,39 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
 
-        const user = await prisma.users.findUnique({
-          where: { email: credentials.email }
-        });
+        try {
+          const user = await findUserWithRetry(credentials.email);
 
-        if (!user || !user.password_hash) {
+          if (!user || !user.password_hash) {
+            return null;
+          }
+
+          const isPasswordValid = await bcrypt.compare(
+            credentials.password, 
+            user.password_hash
+          );
+
+          if (!isPasswordValid) {
+            return null;
+          }
+
+          return {
+            id: user.id.toString(),
+            email: user.email,
+            name: `${user.first_name || ''} ${user.last_name || ''}`.trim(),
+            role: user.role,
+          };
+        } catch (error) {
+          console.error("[Auth] Fatal DB connection error during authorize:", error);
           return null;
         }
-
-        const isPasswordValid = await bcrypt.compare(
-          credentials.password, 
-          user.password_hash
-        );
-
-        if (!isPasswordValid) {
-          return null;
-        }
-
-        return {
-          id: user.id.toString(),
-          email: user.email,
-          name: `${user.first_name || ''} ${user.last_name || ''}`.trim(),
-          role: user.role,
-        };
       }
     })
   ],
   callbacks: {
     async session({ session, token }) {
       if (token && session.user) {
-        // @ts-ignore - appending custom properties to session user
+        // @ts-ignore
         session.user.id = token.id;
         // @ts-ignore
         session.user.role = token.role;
