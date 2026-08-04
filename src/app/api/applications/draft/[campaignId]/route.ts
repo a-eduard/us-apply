@@ -17,17 +17,19 @@ function getUserIdFromToken(req: Request): number | null {
 
 export async function GET(
   req: Request,
-  { params }: { params: { campaignId: string } }
+  { params }: { params: Promise<{ campaignId: string }> }
 ) {
   try {
     const userId = getUserIdFromToken(req);
     if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const campaignId = parseInt(params.campaignId, 10);
+    const resolvedParams = await params;
+    const campaignId = parseInt(resolvedParams.campaignId, 10);
+    
     if (isNaN(campaignId)) return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
 
     const application = await prisma.applications.findFirst({
-      where: { userId, campaignId },
+      where: { user_id: userId, campaign_id: campaignId },
     });
 
     if (!application) {
@@ -44,25 +46,27 @@ export async function GET(
 
 export async function PATCH(
   req: Request,
-  { params }: { params: { campaignId: string } }
+  { params }: { params: Promise<{ campaignId: string }> }
 ) {
   try {
     const userId = getUserIdFromToken(req);
     if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const campaignId = parseInt(params.campaignId, 10);
+    const resolvedParams = await params;
+    const campaignId = parseInt(resolvedParams.campaignId, 10);
+    
     if (isNaN(campaignId)) return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
 
     const body = await req.json();
 
     const existingApp = await prisma.applications.findFirst({
-      where: { userId, campaignId },
+      where: { user_id: userId, campaign_id: campaignId },
     });
 
     if (existingApp) {
       await prisma.applications.update({
         where: { id: existingApp.id },
-        data: { draftData: body.draftData },
+        data: { draft_data: body.draftData },
       });
     }
 

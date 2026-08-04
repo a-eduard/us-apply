@@ -5,7 +5,10 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 
-export async function GET(req: Request, context: any) {
+export async function GET(
+  req: Request,
+  { params }: { params: Promise<{ campaignId: string }> }
+) {
   try {
     const session = await getServerSession(authOptions);
 
@@ -13,8 +16,8 @@ export async function GET(req: Request, context: any) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const resolvedParams = await context.params;
-    const campaignId = parseInt(resolvedParams?.campaignId, 10);
+    const resolvedParams = await params;
+    const campaignId = parseInt(resolvedParams.campaignId, 10);
 
     if (isNaN(campaignId)) {
       return NextResponse.json({ error: "Invalid campaign ID" }, { status: 400 });
@@ -79,13 +82,16 @@ export async function GET(req: Request, context: any) {
   }
 }
 
-export async function DELETE(req: Request, context: any) {
+export async function DELETE(
+  req: Request,
+  { params }: { params: Promise<{ campaignId: string }> }
+) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const resolvedParams = await context.params;
-    const campaignId = parseInt(resolvedParams?.campaignId, 10);
+    const resolvedParams = await params;
+    const campaignId = parseInt(resolvedParams.campaignId, 10);
     if (isNaN(campaignId)) return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
 
     await prisma.applications.deleteMany({ where: { campaign_id: campaignId } });
@@ -97,13 +103,16 @@ export async function DELETE(req: Request, context: any) {
   }
 }
 
-export async function PATCH(req: Request, context: any) {
+export async function PATCH(
+  req: Request,
+  { params }: { params: Promise<{ campaignId: string }> }
+) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const resolvedParams = await context.params;
-    const campaignId = parseInt(resolvedParams?.campaignId, 10);
+    const resolvedParams = await params;
+    const campaignId = parseInt(resolvedParams.campaignId, 10);
     if (isNaN(campaignId)) return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
 
     const body = await req.json();

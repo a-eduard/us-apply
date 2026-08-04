@@ -5,7 +5,7 @@ import { authOptions } from "@/lib/auth";
 
 export async function POST(
   req: Request,
-  { params }: { params: { appId: string } }
+  { params }: { params: Promise<{ appId: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -15,23 +15,27 @@ export async function POST(
     }
 
     const authUserId = parseInt((session.user as any).id, 10);
-    const applicationId = parseInt(params.appId, 10);
+    
+    // Await params for Next.js 15 compatibility
+    const resolvedParams = await params;
+    const applicationId = parseInt(resolvedParams.appId, 10);
 
     if (isNaN(applicationId)) {
       return NextResponse.json({ error: "Invalid application ID" }, { status: 400 });
     }
 
-    // Verify application existence and campaign ownership by employer
+    // ИСПРАВЛЕНИЕ: Используем 'campaigns' согласно твоей схеме Prisma
     const application = await prisma.applications.findUnique({
       where: { id: applicationId },
-      include: { campaign: true },
+      include: { campaigns: true },
     });
 
     if (!application) {
       return NextResponse.json({ error: "Application not found" }, { status: 404 });
     }
 
-    if (application.campaign && application.campaign.user_id !== authUserId) {
+    // ИСПРАВЛЕНИЕ: Обращаемся к application.campaigns
+    if (application.campaigns && application.campaigns.user_id !== authUserId) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 

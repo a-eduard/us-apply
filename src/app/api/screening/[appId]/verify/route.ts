@@ -6,7 +6,7 @@ import { sendInterviewInvite } from "@/mail";
 
 export async function POST(
   req: Request,
-  { params }: { params: { appId: string } }
+  { params }: { params: Promise<{ appId: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -16,7 +16,10 @@ export async function POST(
     }
 
     const authUserId = parseInt((session.user as any).id, 10);
-    const applicationId = parseInt(params.appId, 10);
+    
+    // Await params for Next.js 15 compatibility
+    const resolvedParams = await params;
+    const applicationId = parseInt(resolvedParams.appId, 10);
 
     if (isNaN(applicationId)) {
       return NextResponse.json({ error: "Invalid application ID" }, { status: 400 });
@@ -26,7 +29,7 @@ export async function POST(
     const application = await prisma.applications.findUnique({
       where: { id: applicationId },
       include: {
-        campaigns: true, // <-- Исправлено на множественное число
+        campaigns: true, 
         users: true 
       },
     });
@@ -61,7 +64,7 @@ export async function POST(
     if (approved && application.users?.email) {
       const candidateEmail = application.users.email;
       const candidateName = application.users.first_name || "Candidate";
-      const campaignTitle = application.campaigns.title || "Job Position"; // <-- Исправлено на множественное число
+      const campaignTitle = application.campaigns.title || "Job Position"; 
 
       // Отправляем в фоновом режиме, не блокируя ответ клиенту
       sendInterviewInvite(candidateEmail, candidateName, campaignTitle, calendlyUrl).catch(err =>

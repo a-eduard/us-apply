@@ -5,7 +5,7 @@ import { authOptions } from "@/lib/auth";
 
 export async function POST(
   req: Request,
-  context: { params: Promise<{ appId: string }> | { appId: string } }
+  { params }: { params: Promise<{ appId: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -14,8 +14,7 @@ export async function POST(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Распаковка параметров для совместимости с Next.js 14/15
-    const resolvedParams = await context.params;
+    const resolvedParams = await params;
     const appId = parseInt(resolvedParams.appId, 10);
 
     if (isNaN(appId)) {
@@ -25,7 +24,6 @@ export async function POST(
     const body = await req.json();
     const { status, notes } = body;
 
-    // Формируем объект с данными для обновления
     const updateData: any = {};
     if (status !== undefined) updateData.status = status;
     if (notes !== undefined) updateData.employer_notes = notes;
