@@ -56,7 +56,7 @@ export async function POST(
       where: { id: applicationId },
       data: {
         status: newStatus,
-        interviewUrl: calendlyUrl || undefined, 
+        interview_url: calendlyUrl || undefined, // <-- ИСПРАВЛЕНИЕ ЗДЕСЬ
       },
     });
 
