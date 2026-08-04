@@ -8,6 +8,9 @@ const nextConfig = {
     // Bypasses ESLint check on Vercel build step
     ignoreDuringBuilds: true,
   },
+  experimental: {
+    useTypeScriptCli: true,
+  },
 };
 
 export default nextConfig;
