@@ -5,7 +5,7 @@ import { authOptions } from "@/lib/auth";
 
 export async function POST(
   req: Request,
-  { params }: { params: { appId: string } }
+  { params }: { params: Promise<{ appId: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -15,7 +15,10 @@ export async function POST(
     }
 
     const authUserId = parseInt((session.user as any).id, 10);
-    const applicationId = parseInt(params.appId, 10);
+    
+    // Await the params object (required in Next.js 15+)
+    const resolvedParams = await params;
+    const applicationId = parseInt(resolvedParams.appId, 10);
     
     if (isNaN(applicationId)) {
       return NextResponse.json({ error: "Invalid application ID" }, { status: 400 });
