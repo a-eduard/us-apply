@@ -117,7 +117,7 @@ const StepTwo = forwardRef(function StepTwo({
     try {
       let finalResumeUrl = defaultValues?.resumeUrl || '';
 
-      // 1. ЗАГРУЖАЕМ РЕЗЮМЕ НА СЕРВЕР
+      // 1. UPLOAD RESUME TO AWS S3
       if (data.resumeFile instanceof File) {
         const fileData = new FormData();
         fileData.append("file", data.resumeFile);
@@ -134,7 +134,7 @@ const StepTwo = forwardRef(function StepTwo({
 
       const userId = session?.user ? (session.user as any).id : null;
 
-      // 2. ОБНОВЛЯЕМ ПРОФИЛЬ КАНДИДАТА НАПРЯМУЮ
+      // 2. UPDATE PROFILE
       if (userId) {
         const profileRes = await fetch(`/api/users/${userId}/profile`, {
           method: 'PATCH',
@@ -152,7 +152,7 @@ const StepTwo = forwardRef(function StepTwo({
         }
       }
 
-      // 3. СОХРАНЯЕМ ЧЕРНОВИК ЗАЯВКИ (ТОЛЬКО ЕСЛИ ЕСТЬ КАМПАНИЯ)
+      // 3. SAVE DRAFT (IF CAMPAIGN EXISTS)
       if (campaignId) {
         const draftPayload = {
           campaign_id: parseInt(campaignId, 10),
@@ -177,7 +177,7 @@ const StepTwo = forwardRef(function StepTwo({
     } catch (error: any) {
       console.error("Failed to save Step 2:", error);
       setSaveError(error.message || "A database error occurred. Please try again.");
-      return false; // НЕ ПЕРЕХОДИМ НА СЛЕДУЮЩИЙ ШАГ ПРИ ОШИБКЕ
+      return false; 
     } finally {
       setIsSaving(false);
     }
@@ -205,6 +205,12 @@ const StepTwo = forwardRef(function StepTwo({
     if (e.target.files && e.target.files[0]) {
       setValue('resumeFile', e.target.files[0], { shouldValidate: true });
     }
+  };
+
+  const handleRemoveFile = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setValue('resumeFile', null, { shouldValidate: true });
   };
 
   const displayNiches = Array.from(new Set([...DEFAULT_NICHES, ...niches]));
@@ -337,22 +343,39 @@ const StepTwo = forwardRef(function StepTwo({
       <div className="space-y-1.5 sm:space-y-2" id="resumeFile">
         <label className="text-sm font-bold text-slate-700">Resume (PDF)</label>
         <div className={cn(
-          "border-2 border-dashed rounded-xl p-6 sm:p-8 flex flex-col items-center justify-center bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer relative", 
-          errors.resumeFile ? "border-red-500 bg-red-50/50" : "border-slate-300 hover:border-blue-400"
+          "border-2 border-dashed rounded-xl p-6 sm:p-8 flex flex-col items-center justify-center transition-colors relative", 
+          errors.resumeFile ? "border-red-500 bg-red-50/50" : "bg-slate-50 border-slate-300 hover:border-blue-400 hover:bg-slate-100"
         )}>
-          <input 
-            type="file" 
-            accept=".pdf,.doc,.docx"
-            onChange={handleFileChange}
-            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" 
-          />
-          <Upload className={cn("w-5 h-5 sm:w-6 sm:h-6 mb-2 sm:mb-3", errors.resumeFile ? "text-red-400" : "text-slate-400")} />
+          
+          {/* Show input ONLY when there is no file selected */}
+          {!resumeFile && (
+            <input 
+              type="file" 
+              accept=".pdf"
+              onChange={handleFileChange}
+              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" 
+            />
+          )}
+
           {resumeFile ? (
-            <div className="text-xs sm:text-sm font-bold text-blue-600 bg-blue-50 px-3 sm:px-4 py-2 rounded-lg truncate max-w-full text-center">{resumeFile.name}</div>
+            <div className="z-20 relative flex items-center gap-3 bg-white border border-blue-200 px-4 py-2 rounded-xl shadow-sm animate-in zoom-in-95 duration-200">
+              <div className="text-xs sm:text-sm font-bold text-blue-600 truncate max-w-[200px] sm:max-w-[300px]">
+                {resumeFile.name || "Resume file"}
+              </div>
+              <button
+                type="button"
+                onClick={handleRemoveFile}
+                className="p-1.5 bg-red-50 text-red-500 rounded-lg hover:bg-red-100 transition-colors"
+                title="Remove file"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
           ) : (
             <>
+              <Upload className={cn("w-5 h-5 sm:w-6 sm:h-6 mb-2 sm:mb-3", errors.resumeFile ? "text-red-400" : "text-slate-400")} />
               <div className="text-xs sm:text-sm font-bold text-slate-900 mb-1">Click or drag file</div>
-              <div className="text-[10px] sm:text-xs text-slate-500 font-medium">PDF or DOCX up to 5MB</div>
+              <div className="text-[10px] sm:text-xs text-slate-500 font-medium">Only PDF up to 5MB</div>
             </>
           )}
         </div>
