@@ -5,7 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { ChevronLeft, Loader2, Building2, Briefcase, Image as ImageIcon, UploadCloud, X, DollarSign, Percent } from "lucide-react";
+import { ChevronLeft, Loader2, Building2, Briefcase, Image as ImageIcon, UploadCloud, X } from "lucide-react";
 import Link from "next/link";
 
 const campaignSchema = z.object({
@@ -13,9 +13,7 @@ const campaignSchema = z.object({
   companyName: z.string().optional(), 
   niche: z.string().optional(),
   salesType: z.string().optional(),
-  baseSalary: z.string().optional(),
-  ote: z.string().optional(),
-  commission: z.string().optional(),
+  shortDescription: z.string().optional(), // Добавлено короткое описание
   description: z.string().optional(),
   requirements: z.string().optional(),
 });
@@ -59,9 +57,7 @@ export default function EditCampaignPage() {
           companyName: data.company_name || "",
           niche: data.niche || "",
           salesType: data.sales_type || "",
-          baseSalary: data.base_salary || "",
-          ote: data.ote || "",
-          commission: data.commission || "",
+          shortDescription: data.short_description || "", // Загружаем короткое описание
           description: data.description || "",
           requirements: data.requirements || "",
         });
@@ -115,7 +111,12 @@ export default function EditCampaignPage() {
         finalLogoUrl = null;
       }
 
-      const payload = { ...data, logoUrl: finalLogoUrl };
+      // Передаем short_description в бэкенд
+      const payload = { 
+        ...data, 
+        short_description: data.shortDescription,
+        logoUrl: finalLogoUrl 
+      };
 
       // PATCH request to update the specific campaign
       const response = await fetch(`/api/employer/campaigns/${campaignId}`, {
@@ -129,8 +130,8 @@ export default function EditCampaignPage() {
         throw new Error(resData.error || "Failed to update campaign");
       }
 
-      router.push("/dashboard/employer");
       router.refresh();
+      router.push("/dashboard/employer");
     } catch (err: any) {
       setError(err.message || "An unexpected error occurred.");
       setIsSaving(false);
@@ -281,53 +282,22 @@ export default function EditCampaignPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-              <div>
-                <label className="block text-sm font-bold text-slate-700 mb-2">Base Salary</label>
-                <div className="relative">
-                  <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                  <input
-                    {...register("baseSalary")}
-                    type="text"
-                    placeholder="e.g. $4,000/mo"
-                    className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition-colors text-sm"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-bold text-slate-700 mb-2">OTE (Earnings)</label>
-                <div className="relative">
-                  <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                  <input
-                    {...register("ote")}
-                    type="text"
-                    placeholder="e.g. $120,000/yr"
-                    className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition-colors text-sm"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-bold text-slate-700 mb-2">Commission</label>
-                <div className="relative">
-                  <Percent className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                  <input
-                    {...register("commission")}
-                    type="text"
-                    placeholder="e.g. 15%"
-                    className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition-colors text-sm"
-                  />
-                </div>
-              </div>
+            <div>
+              <label className="block text-sm font-bold text-slate-700 mb-2">Short Description (for Home Page Card)</label>
+              <textarea
+                {...register("shortDescription")}
+                rows={3}
+                placeholder="A brief 1-2 sentence summary of the role..."
+                className="w-full px-4 py-4 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition-colors text-sm resize-y"
+              ></textarea>
             </div>
 
             <div>
-              <label className="block text-sm font-bold text-slate-700 mb-2">Job Description</label>
+              <label className="block text-sm font-bold text-slate-700 mb-2">Full Job Description</label>
               <textarea
                 {...register("description")}
-                rows={4}
-                placeholder="Describe the role, responsibilities, and benefits..."
+                rows={8}
+                placeholder="Detailed description including responsibilities, day-to-day tasks, etc..."
                 className="w-full px-4 py-4 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition-colors text-sm resize-y"
               ></textarea>
             </div>
@@ -336,7 +306,7 @@ export default function EditCampaignPage() {
               <label className="block text-sm font-bold text-slate-700 mb-2">Requirements</label>
               <textarea
                 {...register("requirements")}
-                rows={3}
+                rows={5}
                 placeholder="List the required skills and experience..."
                 className="w-full px-4 py-4 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition-colors text-sm resize-y"
               ></textarea>

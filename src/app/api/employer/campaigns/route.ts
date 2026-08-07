@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth/next";
@@ -47,22 +49,8 @@ export async function POST(req: Request) {
 
     const authUserId = parseInt((session.user as any).id, 10);
     const body = await req.json();
-    
-    // Extracting all fields including the new ones and logoUrl
-    const { 
-      title, 
-      companyName, 
-      description, 
-      requirements, 
-      niche, 
-      salesType,
-      baseSalary,
-      ote,
-      commission,
-      logoUrl 
-    } = body;
 
-    if (!title) {
+    if (!body.title) {
       return NextResponse.json(
         { error: "Title is required" },
         { status: 400 }
@@ -71,16 +59,15 @@ export async function POST(req: Request) {
 
     const newCampaign = await prisma.campaigns.create({
       data: {
-        title,
-        company_name: companyName || "",
-        description: description || "",
-        requirements: requirements || "",
-        niche: niche || "",
-        sales_type: salesType || "",
-        base_salary: baseSalary || "",
-        ote: ote || "",
-        commission: commission || "",
-        logo_url: logoUrl || null,
+        title: body.title,
+        company_name: body.companyName || "",
+        description: body.description || "",
+        // Читаем оба варианта на всякий случай, чтобы 100% сохранить
+        short_description: body.shortDescription || body.short_description || "", 
+        requirements: body.requirements || "",
+        niche: body.niche || "",
+        sales_type: body.salesType || "",
+        logo_url: body.logoUrl || null,
         user_id: authUserId,
         status: "Active",
       }

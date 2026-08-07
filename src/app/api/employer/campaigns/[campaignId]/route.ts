@@ -28,7 +28,7 @@ export async function GET(
       include: {
         applications: {
           include: {
-            users: true // <-- ИСПРАВЛЕНИЕ: Теперь забираем ВСЕ поля пользователя
+            users: true
           }
         }
       }
@@ -42,7 +42,6 @@ export async function GET(
       ...campaign,
       applications: campaign.applications
         .map((app: any) => {
-          // ИСПРАВЛЕНИЕ: Красиво форматируем ниши, убирая скобки и кавычки массива
           let parsedNiche = app.users?.niches || app.niche || "";
           if (typeof parsedNiche === "string" && parsedNiche.startsWith("[")) {
             try {
@@ -56,7 +55,6 @@ export async function GET(
             lastName: app.users?.last_name || "",
             email: app.users?.email || "",
             phone: app.users?.phone || "",
-            // ИСПРАВЛЕНИЕ: Прокидываем все файлы и ссылки во фронтенд
             linkedinUrl: app.users?.linkedin_url || "",
             resumeUrl: app.users?.resume_url || "",
             videoPitchUrl: app.users?.video_pitch_url || "",
@@ -94,11 +92,27 @@ export async function DELETE(
     const campaignId = parseInt(resolvedParams.campaignId, 10);
     if (isNaN(campaignId)) return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
 
-    await prisma.applications.deleteMany({ where: { campaign_id: campaignId } });
+    const apps = await prisma.applications.findMany({ 
+      where: { campaign_id: campaignId }, 
+      select: { id: true } 
+    });
+    
+    const appIds = apps.map(a => a.id);
+
+    if (appIds.length > 0) {
+      await prisma.candidate_answers.deleteMany({ where: { application_id: { in: appIds } } });
+      await prisma.application_stages_history.deleteMany({ where: { application_id: { in: appIds } } });
+      await prisma.screening_requests.deleteMany({ where: { application_id: { in: appIds } } });
+      await prisma.applications.deleteMany({ where: { campaign_id: campaignId } });
+    }
+
+    await prisma.custom_questions.deleteMany({ where: { campaign_id: campaignId } });
+    await prisma.analytics_events.deleteMany({ where: { campaign_id: campaignId } });
     await prisma.campaigns.delete({ where: { id: campaignId } });
 
     return NextResponse.json({ success: true });
   } catch (error: any) {
+    console.error("DELETE Campaign Error:", error);
     return NextResponse.json({ error: "Server Error", details: error.message }, { status: 500 });
   }
 }
@@ -123,18 +137,17 @@ export async function PATCH(
         title: body.title,
         company_name: body.companyName,
         description: body.description,
+        short_description: body.shortDescription || body.short_description || "", // <--- ИСПРАВЛЕНО ЗДЕСЬ
         requirements: body.requirements,
         niche: body.niche,
         sales_type: body.salesType,
-        base_salary: body.baseSalary,
-        ote: body.ote,
-        commission: body.commission,
         logo_url: body.logoUrl,
       }
     });
 
     return NextResponse.json(updatedCampaign);
   } catch (error: any) {
+    console.error("PATCH Campaign Error:", error);
     return NextResponse.json({ error: "Server Error", details: error.message }, { status: 500 });
   }
 }

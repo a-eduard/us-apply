@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
-import { Building2, DollarSign, Target, Percent, Flame, ArrowLeft, CheckCircle2 } from "lucide-react";
+import { Building2, ArrowLeft, CheckCircle2 } from "lucide-react";
 import ApplyButton from "./ApplyButton";
 
 export default async function CampaignPublicPage({
@@ -31,10 +31,6 @@ export default async function CampaignPublicPage({
   if (!campaign) {
     notFound();
   }
-
-  // Логика бейджа High-Ticket
-  const oteNumber = parseInt(campaign.ote?.replace(/\D/g, '') || '0');
-  const isHighTicket = oteNumber >= 100000;
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] font-sans text-slate-900 pb-24 sm:pb-28 relative">
@@ -92,52 +88,13 @@ export default async function CampaignPublicPage({
                   </div>
                 </div>
               </div>
-
-              {isHighTicket && (
-                <div className="inline-flex items-center gap-1.5 bg-rose-50 text-rose-600 px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl text-xs sm:text-sm font-extrabold border border-rose-100 shadow-sm shrink-0 self-start sm:self-auto">
-                  <Flame className="w-4 h-4 sm:w-5 sm:h-5" /> HIGH-TICKET ROLE
-                </div>
-              )}
             </div>
             
             <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-slate-900 mb-8 sm:mb-12 tracking-tight leading-tight">
               {campaign.title}
             </h1>
-            
-            {/* Numbers Grid - Premium Style */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-5 mb-10 sm:mb-14">
-              
-              <div className="bg-slate-50 rounded-2xl sm:rounded-3xl p-5 sm:p-6 border border-slate-100 flex flex-col justify-center relative overflow-hidden group hover:border-slate-300 transition-colors">
-                <div className="text-[10px] sm:text-xs font-extrabold text-slate-400 uppercase tracking-widest mb-1.5 sm:mb-2 flex items-center gap-1.5 sm:gap-2">
-                  <DollarSign className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> Base Salary
-                </div>
-                <div className="text-xl sm:text-2xl md:text-3xl font-black text-slate-900">
-                  {campaign.base_salary || "N/A"}
-                </div>
-              </div>
-              
-              {/* OTE receives a special highlight */}
-              <div className="bg-rose-50/50 rounded-2xl sm:rounded-3xl p-5 sm:p-6 border border-rose-100 flex flex-col justify-center relative overflow-hidden group hover:border-rose-200 transition-colors">
-                <div className="absolute -right-6 -top-6 w-20 sm:w-24 h-20 sm:h-24 bg-rose-500/10 rounded-full blur-2xl"></div>
-                <div className="text-[10px] sm:text-xs font-extrabold text-rose-500 uppercase tracking-widest mb-1.5 sm:mb-2 flex items-center gap-1.5 sm:gap-2 relative z-10">
-                  <Target className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> On-Target Earnings
-                </div>
-                <div className="text-2xl sm:text-3xl md:text-4xl font-black text-rose-700 relative z-10 tracking-tight">
-                  {campaign.ote || "N/A"}
-                </div>
-              </div>
-              
-              <div className="bg-slate-50 rounded-2xl sm:rounded-3xl p-5 sm:p-6 border border-slate-100 flex flex-col justify-center relative overflow-hidden group hover:border-slate-300 transition-colors">
-                <div className="text-[10px] sm:text-xs font-extrabold text-slate-400 uppercase tracking-widest mb-1.5 sm:mb-2 flex items-center gap-1.5 sm:gap-2">
-                  <Percent className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> Commission
-                </div>
-                <div className="text-xl sm:text-2xl md:text-3xl font-black text-slate-900">
-                  {campaign.commission || "N/A"}
-                </div>
-              </div>
 
-            </div>
-
+            {/* Divider under title */}
             <div className="w-full h-px bg-slate-100 mb-8 sm:mb-12"></div>
 
             {/* About the Role */}
@@ -176,16 +133,10 @@ export default async function CampaignPublicPage({
 
       {/* Sticky Bottom Bar */}
       <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-slate-200 shadow-[0_-10px_40px_rgba(0,0,0,0.05)] z-50">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
-          <div className="hidden sm:block min-w-0 pr-4">
-            <div className="text-sm sm:text-base font-extrabold text-slate-900 truncate">{campaign.title}</div>
-            <div className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-widest mt-0.5 truncate">
-              {campaign.company_name || "Confidential"}
-            </div>
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-3 sm:py-4 flex justify-end">
+          <div className="w-full sm:w-auto">
+            <ApplyButton campaignId={campaign.id} />
           </div>
-          
-          <ApplyButton campaignId={campaign.id} />
-          
         </div>
       </div>
     </div>

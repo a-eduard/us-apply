@@ -31,14 +31,14 @@ export async function POST(req: Request) {
       Bucket: process.env.AWS_S3_BUCKET as string,
       Key: fileKey,
       ContentType: file.type,
+      ContentLength: buffer.length, // CRITICAL FIX: Explicitly stating the size prevents ECONNRESET
       Body: buffer,
     });
 
     await s3Client.send(command);
 
-    // Build the correct public URL for your custom S3 server
-    const endpoint = process.env.AWS_S3_ENDPOINT?.replace(/\/$/, ""); 
-    const publicUrl = `${endpoint}/${process.env.AWS_S3_BUCKET}/${fileKey}`;
+    // Build the secure public URL using the domain provided by DevOps
+    const publicUrl = `https://s3.getbiz.me/${process.env.AWS_S3_BUCKET}/${fileKey}`;
 
     return NextResponse.json({ success: true, publicUrl });
   } catch (error) {
