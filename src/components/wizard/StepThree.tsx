@@ -215,8 +215,9 @@ const StepThree = forwardRef(function StepThree({
 
       onNext({ pitchMethod: 'video', videoPitchUrl });
     } catch (err) {
-      console.error(err);
-      alert('Upload failed. Please try again.');
+      console.error("Upload Error:", err);
+      // TODO: Handle upload error gracefully in the UI instead of using alert()
+      // alert('Upload failed. Please try again.');
       setIsUploading(false);
     } 
   };

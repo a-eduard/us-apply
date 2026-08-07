@@ -6,11 +6,6 @@ export function Footer() {
     <footer className="w-full bg-white py-8 border-t border-slate-200 mt-auto">
       <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4 text-xs font-medium text-slate-500">
         
-        <div className="flex items-center gap-2">
-          <ShieldCheck className="w-4 h-4 text-emerald-500" />
-          <span>Secure AES-256 Encrypted Checkout</span>
-        </div>
-
         <div className="flex items-center gap-6 flex-wrap justify-center">
           <a 
             href="https://usclosers.com/en/privacy-policy" 
