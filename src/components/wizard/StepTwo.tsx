@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useSession } from 'next-auth/react';
 import { StepTwoSchema } from '@/schemas/wizard';
 import { cn } from '@/lib/utils';
-import { Upload, Loader2, Plus, X } from 'lucide-react';
+import { Upload, Loader2, Plus, X, User } from 'lucide-react';
 
 const DEFAULT_NICHES = [
   "IT / SaaS", "Real Estate", "EdTech", "Finance", 
@@ -37,6 +37,7 @@ const StepTwo = forwardRef(function StepTwo({
     mode: 'onChange',
     reValidateMode: 'onBlur',
     defaultValues: {
+      avatarFile: defaultValues?.avatarFile || null,
       yearsOfExperience: defaultValues?.yearsOfExperience || '',
       niches: defaultValues?.niches || [],
       linkedinUrl: defaultValues?.linkedinUrl || defaultValues?.linkedInUrl || '',
@@ -71,6 +72,7 @@ const StepTwo = forwardRef(function StepTwo({
 
   const niches = watch('niches') || [];
   const resumeFile = watch('resumeFile');
+  const avatarFile = watch('avatarFile');
   const [nicheWarning, setNicheWarning] = useState(false);
 
   const toggleNiche = (niche: string) => {
@@ -116,8 +118,24 @@ const StepTwo = forwardRef(function StepTwo({
     setSaveError('');
     try {
       let finalResumeUrl = defaultValues?.resumeUrl || '';
+      let finalAvatarUrl = defaultValues?.avatarUrl || '';
 
-      // 1. UPLOAD RESUME TO AWS S3
+      // 1. UPLOAD AVATAR TO AWS S3
+      if (data.avatarFile instanceof File) {
+        const fileData = new FormData();
+        fileData.append("file", data.avatarFile);
+        fileData.append("isVideo", "false"); // Keeping standard file handling
+        
+        const uploadRes = await fetch('/api/upload', { method: 'POST', body: fileData });
+        if (uploadRes.ok) {
+          const uploadData = await uploadRes.json();
+          finalAvatarUrl = uploadData.publicUrl;
+        } else {
+          throw new Error("Failed to upload profile photo");
+        }
+      }
+
+      // 2. UPLOAD RESUME TO AWS S3
       if (data.resumeFile instanceof File) {
         const fileData = new FormData();
         fileData.append("file", data.resumeFile);
@@ -134,7 +152,7 @@ const StepTwo = forwardRef(function StepTwo({
 
       const userId = session?.user ? (session.user as any).id : null;
 
-      // 2. UPDATE PROFILE
+      // 3. UPDATE PROFILE WITH AVATAR URL
       if (userId) {
         const profileRes = await fetch(`/api/users/${userId}/profile`, {
           method: 'PATCH',
@@ -143,7 +161,8 @@ const StepTwo = forwardRef(function StepTwo({
             years_of_experience: data.yearsOfExperience,
             niches: data.niches,
             linkedin_url: data.linkedinUrl,
-            resume_url: finalResumeUrl || undefined
+            resume_url: finalResumeUrl || undefined,
+            avatar_url: finalAvatarUrl || undefined
           })
         });
         if (!profileRes.ok) {
@@ -152,7 +171,7 @@ const StepTwo = forwardRef(function StepTwo({
         }
       }
 
-      // 3. SAVE DRAFT (IF CAMPAIGN EXISTS)
+      // 4. SAVE DRAFT (IF CAMPAIGN EXISTS)
       if (campaignId) {
         const draftPayload = {
           campaign_id: parseInt(campaignId, 10),
@@ -172,7 +191,7 @@ const StepTwo = forwardRef(function StepTwo({
         }
       }
 
-      onNext({ ...data, resumeUrl: finalResumeUrl, resumeFile: null });
+      onNext({ ...data, resumeUrl: finalResumeUrl, avatarUrl: finalAvatarUrl, resumeFile: null, avatarFile: null });
       return true;
     } catch (error: any) {
       console.error("Failed to save Step 2:", error);
@@ -186,7 +205,7 @@ const StepTwo = forwardRef(function StepTwo({
   const onError = (errors: any) => {
     const firstError = Object.keys(errors)[0];
     if (firstError) {
-      if (firstError === 'niches' || firstError === 'resumeFile') {
+      if (firstError === 'niches' || firstError === 'resumeFile' || firstError === 'avatarFile') {
         const element = document.getElementById(firstError);
         if (element) {
           element.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -201,16 +220,28 @@ const StepTwo = forwardRef(function StepTwo({
     }
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleResumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setValue('resumeFile', e.target.files[0], { shouldValidate: true });
     }
   };
 
-  const handleRemoveFile = (e: React.MouseEvent) => {
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setValue('avatarFile', e.target.files[0], { shouldValidate: true });
+    }
+  };
+
+  const handleRemoveResume = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setValue('resumeFile', null, { shouldValidate: true });
+  };
+
+  const handleRemoveAvatar = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setValue('avatarFile', null, { shouldValidate: true });
   };
 
   const displayNiches = Array.from(new Set([...DEFAULT_NICHES, ...niches]));
@@ -223,6 +254,46 @@ const StepTwo = forwardRef(function StepTwo({
           {saveError}
         </div>
       )}
+
+      {/* Avatar Upload */}
+      <div className="flex flex-col items-center justify-center space-y-3" id="avatarFile">
+        <div className={cn(
+          "relative w-24 h-24 rounded-full border-2 border-dashed flex items-center justify-center overflow-hidden group transition-colors",
+          errors.avatarFile ? "border-red-500 bg-red-50" : "border-slate-300 bg-slate-50 hover:bg-slate-100"
+        )}>
+          {avatarFile ? (
+             <img src={URL.createObjectURL(avatarFile)} alt="Avatar" className="w-full h-full object-cover" />
+          ) : (
+             <User className={cn("w-8 h-8 transition-colors", errors.avatarFile ? "text-red-400" : "text-slate-400 group-hover:text-blue-500")} />
+          )}
+          
+          <input 
+            type="file" 
+            accept="image/jpeg, image/png, image/webp"
+            onChange={handleAvatarChange}
+            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" 
+          />
+        </div>
+
+        <div className="text-center">
+          <p className="text-sm font-bold text-slate-700">Profile Photo</p>
+          <p className="text-[10px] sm:text-xs text-slate-500 font-medium">Optional. JPG, PNG up to 5MB</p>
+        </div>
+
+        {avatarFile && (
+          <button
+            type="button"
+            onClick={handleRemoveAvatar}
+            className="text-xs text-red-500 font-medium flex items-center gap-1 hover:text-red-700 transition-colors"
+          >
+            <X className="w-3 h-3" /> Remove photo
+          </button>
+        )}
+
+        {errors.avatarFile && <p className="text-xs text-red-500 font-bold text-center">{(errors.avatarFile as any).message}</p>}
+      </div>
+
+      <div className="w-full h-px bg-slate-100"></div>
 
       {/* Years of Experience */}
       <div className="space-y-1.5 sm:space-y-2">
@@ -352,7 +423,7 @@ const StepTwo = forwardRef(function StepTwo({
             <input 
               type="file" 
               accept=".pdf"
-              onChange={handleFileChange}
+              onChange={handleResumeChange}
               className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" 
             />
           )}
@@ -364,7 +435,7 @@ const StepTwo = forwardRef(function StepTwo({
               </div>
               <button
                 type="button"
-                onClick={handleRemoveFile}
+                onClick={handleRemoveResume}
                 className="p-1.5 bg-red-50 text-red-500 rounded-lg hover:bg-red-100 transition-colors"
                 title="Remove file"
               >

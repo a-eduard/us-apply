@@ -27,8 +27,20 @@ export const StepOneSchema = ProfileEnrichmentSchema;
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
 const ACCEPTED_FILE_TYPES = ["application/pdf"];
+const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
 
 export const StepTwoSchema = z.object({
+  avatarFile: z.any()
+    .optional()
+    .refine(
+      (file) => !file || file.size <= MAX_FILE_SIZE, 
+      "Image size exceeds 5MB."
+    )
+    .refine(
+      (file) => !file || ACCEPTED_IMAGE_TYPES.includes(file.type),
+      "Only .jpg, .png, and .webp formats are supported"
+    ),
+
   yearsOfExperience: z.string().min(1, "Please select your work experience"),
   
   niches: z.array(z.string())
