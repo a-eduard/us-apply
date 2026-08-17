@@ -124,7 +124,7 @@ const StepTwo = forwardRef(function StepTwo({
       if (data.avatarFile instanceof File) {
         const fileData = new FormData();
         fileData.append("file", data.avatarFile);
-        fileData.append("isVideo", "false"); // Keeping standard file handling
+        fileData.append("folder", "avatars"); // EXPLICIT FOLDER
         
         const uploadRes = await fetch('/api/upload', { method: 'POST', body: fileData });
         if (uploadRes.ok) {
@@ -139,7 +139,7 @@ const StepTwo = forwardRef(function StepTwo({
       if (data.resumeFile instanceof File) {
         const fileData = new FormData();
         fileData.append("file", data.resumeFile);
-        fileData.append("isVideo", "false");
+        fileData.append("folder", "resumes"); // EXPLICIT FOLDER
         
         const uploadRes = await fetch('/api/upload', { method: 'POST', body: fileData });
         if (uploadRes.ok) {

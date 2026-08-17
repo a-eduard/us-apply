@@ -15,16 +15,27 @@ export async function POST(req: Request) {
     const formData = await req.formData();
     const file = formData.get("file") as File;
     const isVideo = formData.get("isVideo") === "true";
+    let folder = formData.get("folder") as string;
 
     if (!file) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
+    }
+
+    // Determine target folder securely based on explicit parameter or fallback
+    if (!folder) {
+      folder = isVideo ? "videos" : "resumes";
+    }
+    
+    // Prevent path traversal by strictly allowing only specific folders
+    const allowedFolders = ["avatars", "resumes", "videos"];
+    if (!allowedFolders.includes(folder)) {
+      folder = "misc"; 
     }
 
     // Convert file to Buffer for AWS SDK
     const buffer = Buffer.from(await file.arrayBuffer());
     const extension = file.name.split(".").pop();
     const uniqueFileName = `${crypto.randomUUID()}-${Date.now()}.${extension}`;
-    const folder = isVideo ? "videos" : "resumes";
     const fileKey = `uploads/${folder}/${uniqueFileName}`;
 
     const command = new PutObjectCommand({
