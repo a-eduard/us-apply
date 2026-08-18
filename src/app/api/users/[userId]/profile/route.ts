@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
+import { deleteS3FileByUrl } from "@/lib/s3";
 
 export async function GET(
   req: Request,
@@ -185,6 +186,28 @@ export async function DELETE(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
+    // 1. Сначала находим пользователя, чтобы получить ссылки на его файлы
+    const user = await prisma.users.findUnique({
+      where: { id: targetUserId },
+      select: {
+        avatar_url: true,
+        resume_url: true,
+        video_pitch_url: true,
+      }
+    });
+
+    // 2. Удаляем файлы из S3, если они есть
+    if (user) {
+      const deletePromises = [];
+      if (user.avatar_url) deletePromises.push(deleteS3FileByUrl(user.avatar_url));
+      if (user.resume_url) deletePromises.push(deleteS3FileByUrl(user.resume_url));
+      if (user.video_pitch_url) deletePromises.push(deleteS3FileByUrl(user.video_pitch_url));
+      
+      // Ждем завершения всех запросов на удаление в S3
+      await Promise.allSettled(deletePromises);
+    }
+
+    // 3. Удаляем связанные данные и самого пользователя из MySQL
     await prisma.applications.deleteMany({
       where: { user_id: targetUserId }
     });
