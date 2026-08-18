@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
+import { deleteS3FileByUrl } from "@/lib/s3"; // ADDED: S3 delete helper
 
 export async function GET(
   req: Request,
@@ -92,6 +93,18 @@ export async function DELETE(
     const campaignId = parseInt(resolvedParams.campaignId, 10);
     if (isNaN(campaignId)) return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
 
+    // 1. Fetch the campaign to get the logo_url before deleting it from DB
+    const campaign = await prisma.campaigns.findUnique({
+      where: { id: campaignId },
+      select: { logo_url: true }
+    });
+
+    // 2. Delete the logo from S3 if it exists
+    if (campaign?.logo_url) {
+      await deleteS3FileByUrl(campaign.logo_url);
+    }
+
+    // 3. Proceed with cascaded deletion of related records in MySQL
     const apps = await prisma.applications.findMany({ 
       where: { campaign_id: campaignId }, 
       select: { id: true } 
@@ -137,7 +150,7 @@ export async function PATCH(
         title: body.title,
         company_name: body.companyName,
         description: body.description,
-        short_description: body.shortDescription || body.short_description || "", // <--- ИСПРАВЛЕНО ЗДЕСЬ
+        short_description: body.shortDescription || body.short_description || "",
         requirements: body.requirements,
         niche: body.niche,
         sales_type: body.salesType,

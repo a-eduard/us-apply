@@ -13,7 +13,7 @@ const campaignSchema = z.object({
   companyName: z.string().optional(), 
   niche: z.string().optional(),
   salesType: z.string().optional(),
-  shortDescription: z.string().optional(), // Добавлено короткое описание
+  shortDescription: z.string().optional(), 
   description: z.string().optional(),
   requirements: z.string().optional(),
 });
@@ -55,8 +55,9 @@ export default function NewCampaignPage() {
       if (logoFile) {
         const formData = new FormData();
         formData.append("file", logoFile);
+        formData.append("folder", "logos"); // Specify the S3 folder
         
-        const uploadRes = await fetch('/api/upload/local', {
+        const uploadRes = await fetch('/api/upload', { // Pointing to main S3 upload route
           method: 'POST',
           body: formData
         });
@@ -64,13 +65,12 @@ export default function NewCampaignPage() {
         const uploadData = await uploadRes.json();
         
         if (!uploadRes.ok) {
-          throw new Error(uploadData.error || 'Failed to upload logo locally');
+          throw new Error(uploadData.error || 'Failed to upload logo to S3');
         }
         
         finalLogoUrl = uploadData.publicUrl;
       }
 
-      // Передаем short_description в бэкенд
       const payload = { 
         ...data, 
         short_description: data.shortDescription,
@@ -153,7 +153,7 @@ export default function NewCampaignPage() {
                 <div className="flex-1">
                   <input 
                     type="file" 
-                    accept="image/*" 
+                    accept="image/jpeg, image/png, image/webp" 
                     className="hidden" 
                     ref={fileInputRef} 
                     onChange={handleImageChange} 

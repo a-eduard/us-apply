@@ -42,7 +42,7 @@ export default function ProfileSettingsForm({ userProfile, userId, session, onSa
     years_of_experience: '',
     linkedin_url: '',
     video_pitch_url: '',
-    avatar_url: '', // ИСПРАВЛЕНО
+    avatar_url: '',
   });
 
   // Avatar & Resume State
@@ -68,7 +68,6 @@ export default function ProfileSettingsForm({ userProfile, userId, session, onSa
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // 1. СИНХРОНИЗАЦИЯ ДАННЫХ ИЛИ FALLBACK ИЗ СЕССИИ
   useEffect(() => {
     if (userProfile) {
       const nameParts = session?.user?.name?.split(' ') || [];
@@ -84,18 +83,17 @@ export default function ProfileSettingsForm({ userProfile, userId, session, onSa
         years_of_experience: userProfile.years_of_experience || '',
         linkedin_url: userProfile.linkedin_url || '',
         video_pitch_url: userProfile.video_pitch_url || '',
-        avatar_url: userProfile.avatar_url || '', // ИСПРАВЛЕНО
+        avatar_url: userProfile.avatar_url || '',
       });
       setNiches(safeParseNiches(userProfile.niches));
       setResumeUrl(userProfile.resume_url || '');
-      setAvatarPreview(userProfile.avatar_url || null); // ИСПРАВЛЕНО
+      setAvatarPreview(userProfile.avatar_url || null);
       if (userProfile.city && userProfile.state) {
         setLocSearch(`${userProfile.city}, ${userProfile.state}`);
       }
     }
   }, [userProfile, session]);
 
-  // Handle City Outside Click
   useEffect(() => {
     const handleClickOutside = (e: any) => {
       if (locRef.current && !locRef.current.contains(e.target)) setShowLocDropdown(false);
@@ -104,7 +102,6 @@ export default function ProfileSettingsForm({ userProfile, userId, session, onSa
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Handle City Search
   useEffect(() => {
     if (skipSearchRef.current) { skipSearchRef.current = false; return; }
     if (locSearch.length >= 3) {
@@ -163,7 +160,6 @@ export default function ProfileSettingsForm({ userProfile, userId, session, onSa
     setShowCustomInput(false);
   };
 
-  // --- VIDEO RECORDING LOGIC ---
   const [showVideoModal, setShowVideoModal] = useState(false);
   const [recorderState, setRecorderState] = useState<'idle' | 'recording' | 'review'>('idle');
   const [stream, setStream] = useState<MediaStream | null>(null);
@@ -257,7 +253,6 @@ export default function ProfileSettingsForm({ userProfile, userId, session, onSa
       setIsVideoUploading(false);
     }
   };
-  // ------------------------------
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -266,12 +261,13 @@ export default function ProfileSettingsForm({ userProfile, userId, session, onSa
 
     try {
       let finalResumeUrl = resumeUrl;
-      let finalAvatarUrl = formData.avatar_url; // ИСПРАВЛЕНО
+      let finalAvatarUrl = formData.avatar_url;
 
       if (resumeFile) {
         const fileData = new FormData();
         fileData.append("file", resumeFile);
         fileData.append("isVideo", "false");
+        fileData.append("folder", "resumes"); // EXPLICIT FOLDER
         const uploadRes = await fetch('/api/upload', { method: 'POST', body: fileData });
         const uploadData = await uploadRes.json();
         if (!uploadRes.ok) throw new Error(uploadData.error || 'Failed to upload resume');
@@ -283,6 +279,7 @@ export default function ProfileSettingsForm({ userProfile, userId, session, onSa
         const avatarData = new FormData();
         avatarData.append("file", avatarFile);
         avatarData.append("isVideo", "false");
+        avatarData.append("folder", "avatars"); // EXPLICIT FOLDER
         const uploadRes = await fetch('/api/upload', { method: 'POST', body: avatarData });
         const uploadData = await uploadRes.json();
         if (!uploadRes.ok) throw new Error(uploadData.error || 'Failed to upload avatar');
@@ -291,7 +288,7 @@ export default function ProfileSettingsForm({ userProfile, userId, session, onSa
 
       const payload = {
         ...formData,
-        avatar_url: finalAvatarUrl, // ИСПРАВЛЕНО
+        avatar_url: finalAvatarUrl,
         niches,
         resume_url: finalResumeUrl
       };
@@ -353,7 +350,6 @@ export default function ProfileSettingsForm({ userProfile, userId, session, onSa
 
       <div className="space-y-10">
         
-        {/* Personal Info Section */}
         <section>
           <div className="flex items-center gap-2 mb-5 pb-2 border-b border-slate-100">
             <User className="w-5 h-5 text-slate-400" />
@@ -439,7 +435,6 @@ export default function ProfileSettingsForm({ userProfile, userId, session, onSa
           </div>
         </section>
 
-        {/* Professional Details Section */}
         <section>
           <div className="flex items-center gap-2 mb-5 pb-2 border-b border-slate-100">
             <Briefcase className="w-5 h-5 text-slate-400" />
@@ -519,7 +514,6 @@ export default function ProfileSettingsForm({ userProfile, userId, session, onSa
           </div>
         </section>
 
-        {/* Links & Attachments Section */}
         <section>
           <div className="flex items-center gap-2 mb-5 pb-2 border-b border-slate-100">
             <Globe className="w-5 h-5 text-slate-400" />
@@ -583,7 +577,6 @@ export default function ProfileSettingsForm({ userProfile, userId, session, onSa
           </div>
         </section>
 
-        {/* Danger Zone Section */}
         <section className="mt-12 pt-8 border-t border-rose-100">
           <div className="flex items-center gap-2 mb-4">
             <AlertTriangle className="w-5 h-5 text-rose-500" />
@@ -608,7 +601,6 @@ export default function ProfileSettingsForm({ userProfile, userId, session, onSa
 
       </div>
 
-      {/* Action Footer */}
       <div className="mt-10 pt-6 border-t border-slate-100 flex justify-end">
         <button 
           onClick={handleSave} 
@@ -620,7 +612,6 @@ export default function ProfileSettingsForm({ userProfile, userId, session, onSa
         </button>
       </div>
 
-      {/* --- VIDEO RECORDING MODAL --- */}
       {showVideoModal && (
         <div className="fixed inset-0 z-[9999] bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
@@ -671,7 +662,6 @@ export default function ProfileSettingsForm({ userProfile, userId, session, onSa
         </div>
       )}
 
-      {/* --- DELETE ACCOUNT MODAL --- */}
       {showDeleteModal && (
         <div className="fixed inset-0 z-[9999] bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl w-full max-w-md overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200 p-6">

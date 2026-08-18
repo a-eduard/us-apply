@@ -41,7 +41,7 @@ export default function CandidateClient() {
   const [loading, setLoading] = useState(true);
 
   const [activeTab, setActiveTab] = useState<"dashboard" | "applications" | "settings">("dashboard");
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false); // Новое состояние для мобильного меню
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const isFirstLoad = useRef(true);
   const userId = (session?.user as any)?.id;
@@ -132,14 +132,13 @@ export default function CandidateClient() {
 
   const handleTabChange = (tabId: any) => {
     setActiveTab(tabId);
-    setIsMobileMenuOpen(false); // Автоматически закрываем меню на мобилке при клике
+    setIsMobileMenuOpen(false); 
   };
 
   return (
     <div className="flex h-screen bg-[#F4F6F9] font-sans text-slate-900 overflow-hidden relative">
       <style>{`header { display: none !important; }`}</style>
 
-      {/* MOBILE OVERLAY */}
       {isMobileMenuOpen && (
         <div 
           className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40 lg:hidden"
@@ -147,7 +146,6 @@ export default function CandidateClient() {
         />
       )}
 
-      {/* SIDEBAR (Responsive) */}
       <aside className={cn(
         "bg-white flex flex-col shadow-[4px_0_24px_rgba(0,0,0,0.02)] z-50 h-full fixed lg:relative lg:translate-x-0 w-[280px] shrink-0 transition-transform duration-300",
         isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
@@ -157,7 +155,6 @@ export default function CandidateClient() {
             <img src="/usc_logo.png" alt="USclosers Logo" className="h-8 shrink-0 mr-3" />
             <span className="font-extrabold text-xl tracking-tight text-slate-900">USclosers</span>
           </div>
-          {/* Close button for mobile */}
           <button 
             onClick={() => setIsMobileMenuOpen(false)}
             className="lg:hidden p-2 text-slate-400 hover:text-slate-600 rounded-lg"
@@ -206,13 +203,10 @@ export default function CandidateClient() {
         </div>
       </aside>
 
-      {/* MAIN CONTENT AREA */}
       <main className="flex-1 flex flex-col h-screen overflow-hidden relative">
 
-        {/* TOP HEADER */}
         <div className="h-20 lg:h-24 px-4 sm:px-6 lg:px-10 flex items-center justify-between shrink-0 bg-[#F4F6F9] z-10">
           <div className="flex items-center gap-3 lg:gap-0">
-            {/* Hamburger Button for Mobile */}
             <button 
               onClick={() => setIsMobileMenuOpen(true)}
               className="lg:hidden p-2 -ml-2 text-slate-500 hover:text-slate-900 hover:bg-slate-200/50 rounded-xl transition-colors"
@@ -240,26 +234,29 @@ export default function CandidateClient() {
               {activeApps.length > 0 && <span className="absolute top-1.5 right-1.5 sm:top-2 sm:right-2 w-2 h-2 rounded-full bg-rose-500 border-2 border-[#F4F6F9]"></span>}
             </button>
 
-            <div className="flex items-center gap-2 sm:gap-3 bg-white pl-1.5 pr-3 sm:px-3 py-1.5 rounded-full shadow-sm border border-slate-200/50 cursor-pointer hover:shadow-md transition-shadow">
-              <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold text-xs sm:text-sm">
-                {userInitials}
-              </div>
+            <div 
+              onClick={() => handleTabChange("settings")}
+              className="flex items-center gap-2 sm:gap-3 bg-white pl-1.5 pr-3 sm:px-3 py-1.5 rounded-full shadow-sm border border-slate-200/50 cursor-pointer hover:shadow-md transition-shadow"
+            >
+              {userProfile?.avatar_url ? (
+                <img src={userProfile.avatar_url} alt="Avatar" className="w-7 h-7 sm:w-9 sm:h-9 rounded-full object-cover border border-slate-200" />
+              ) : (
+                <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold text-xs sm:text-sm">
+                  {userInitials}
+                </div>
+              )}
               <span className="hidden sm:inline font-bold text-sm text-slate-900 pr-2">{displayName}</span>
             </div>
           </div>
         </div>
 
-        {/* SCROLLABLE DASHBOARD CONTENT */}
         <div className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-10 pb-10">
 
-          {/* DASHBOARD TAB */}
           {activeTab === "dashboard" && (
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 max-w-[1400px]">
 
-              {/* LEFT COLUMN: PROFILE CARD */}
               <div className="lg:col-span-4 xl:col-span-3 space-y-6">
                 <div className="bg-white rounded-[2rem] p-6 lg:p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 flex flex-col items-center">
-                  {/* Avatar */}
                   {userProfile?.avatar_url ? (
                     <img src={userProfile.avatar_url} alt="Avatar" className="w-24 h-24 sm:w-28 sm:h-28 rounded-full object-cover mb-4 sm:mb-5 border-4 border-white shadow-lg bg-slate-100" />
                   ) : (
@@ -268,7 +265,6 @@ export default function CandidateClient() {
                     </div>
                   )}
 
-                  {/* Name & Basic Info */}
                   <h2 className="text-lg sm:text-xl font-extrabold text-slate-900 tracking-tight mb-1">{displayName}</h2>
                   <div className="flex flex-col items-center gap-2 mb-6">
                     {userLocation && (
@@ -286,10 +282,8 @@ export default function CandidateClient() {
                     )}
                   </div>
 
-                  {/* Divider */}
                   <div className="w-full h-px bg-slate-100 mb-5 sm:mb-6"></div>
 
-                  {/* Experience & Niches */}
                   <div className="w-full text-left space-y-4 sm:space-y-5 mb-6 sm:mb-8">
                     <div>
                       <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 block">Experience</span>
@@ -309,7 +303,6 @@ export default function CandidateClient() {
                     </div>
                   </div>
 
-                  {/* Quick Links */}
                   <div className="w-full space-y-3 mb-6 sm:mb-8">
                     {userProfile?.linkedin_url && (
                       <a href={userProfile.linkedin_url} target="_blank" rel="noreferrer" className="flex items-center justify-between p-3 rounded-xl border border-slate-100 hover:border-blue-200 hover:bg-blue-50 transition-colors group">
@@ -340,7 +333,6 @@ export default function CandidateClient() {
                     )}
                   </div>
 
-                  {/* Edit Button */}
                   <button
                     onClick={() => handleTabChange("settings")}
                     className="w-full bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 font-bold py-3 sm:py-3.5 rounded-2xl transition-all active:scale-[0.98]"
@@ -350,7 +342,6 @@ export default function CandidateClient() {
                 </div>
               </div>
 
-              {/* RIGHT COLUMN: ACTIVE APPLICATIONS WIDGET */}
               <div className="lg:col-span-8 xl:col-span-9 space-y-8">
                 <div className="bg-white rounded-[2rem] p-6 lg:p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100">
                   <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 gap-3 sm:gap-0">
@@ -435,7 +426,6 @@ export default function CandidateClient() {
             </div>
           )}
 
-          {/* ALL CAMPAIGNS & APPLICATIONS TAB */}
           {activeTab === "applications" && (
             <div className="max-w-[1400px]">
               {allCampaignsList.length === 0 ? (
@@ -523,7 +513,6 @@ export default function CandidateClient() {
             </div>
           )}
 
-          {/* SETTINGS TAB */}
           {activeTab === "settings" && (
             <div className="max-w-[1000px] pb-10">
               <ProfileSettingsForm

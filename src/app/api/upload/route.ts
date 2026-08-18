@@ -27,7 +27,7 @@ export async function POST(req: Request) {
     }
     
     // Prevent path traversal by strictly allowing only specific folders
-    const allowedFolders = ["avatars", "resumes", "videos"];
+    const allowedFolders = ["avatars", "resumes", "videos", "logos"];
     if (!allowedFolders.includes(folder)) {
       folder = "misc"; 
     }
