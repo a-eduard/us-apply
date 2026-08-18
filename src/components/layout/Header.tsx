@@ -54,7 +54,7 @@ export function Header({
         href="/login"
         className="px-6 py-2.5 bg-slate-900 text-white text-sm font-bold rounded-xl hover:bg-slate-800 transition-colors shadow-sm"
       >
-        Login
+        Sign in
       </Link>
     );
   };
