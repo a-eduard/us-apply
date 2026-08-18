@@ -120,11 +120,10 @@ const StepTwo = forwardRef(function StepTwo({
       let finalResumeUrl = defaultValues?.resumeUrl || '';
       let finalAvatarUrl = defaultValues?.avatarUrl || '';
 
-      // 1. UPLOAD AVATAR TO AWS S3
       if (data.avatarFile instanceof File) {
         const fileData = new FormData();
         fileData.append("file", data.avatarFile);
-        fileData.append("folder", "avatars"); // EXPLICIT FOLDER
+        fileData.append("folder", "avatars"); 
         
         const uploadRes = await fetch('/api/upload', { method: 'POST', body: fileData });
         if (uploadRes.ok) {
@@ -135,11 +134,10 @@ const StepTwo = forwardRef(function StepTwo({
         }
       }
 
-      // 2. UPLOAD RESUME TO AWS S3
       if (data.resumeFile instanceof File) {
         const fileData = new FormData();
         fileData.append("file", data.resumeFile);
-        fileData.append("folder", "resumes"); // EXPLICIT FOLDER
+        fileData.append("folder", "resumes"); 
         
         const uploadRes = await fetch('/api/upload', { method: 'POST', body: fileData });
         if (uploadRes.ok) {
@@ -152,7 +150,6 @@ const StepTwo = forwardRef(function StepTwo({
 
       const userId = session?.user ? (session.user as any).id : null;
 
-      // 3. UPDATE PROFILE WITH AVATAR URL
       if (userId) {
         const profileRes = await fetch(`/api/users/${userId}/profile`, {
           method: 'PATCH',
@@ -171,7 +168,6 @@ const StepTwo = forwardRef(function StepTwo({
         }
       }
 
-      // 4. SAVE DRAFT (IF CAMPAIGN EXISTS)
       if (campaignId) {
         const draftPayload = {
           campaign_id: parseInt(campaignId, 10),
@@ -412,17 +408,16 @@ const StepTwo = forwardRef(function StepTwo({
 
       {/* Resume Upload */}
       <div className="space-y-1.5 sm:space-y-2" id="resumeFile">
-        <label className="text-sm font-bold text-slate-700">Resume (PDF)</label>
+        <label className="text-sm font-bold text-slate-700">Resume (PDF, DOCX)</label>
         <div className={cn(
           "border-2 border-dashed rounded-xl p-6 sm:p-8 flex flex-col items-center justify-center transition-colors relative", 
           errors.resumeFile ? "border-red-500 bg-red-50/50" : "bg-slate-50 border-slate-300 hover:border-blue-400 hover:bg-slate-100"
         )}>
           
-          {/* Show input ONLY when there is no file selected */}
           {!resumeFile && (
             <input 
               type="file" 
-              accept=".pdf"
+              accept=".pdf,.doc,.docx"
               onChange={handleResumeChange}
               className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" 
             />
@@ -446,7 +441,7 @@ const StepTwo = forwardRef(function StepTwo({
             <>
               <Upload className={cn("w-5 h-5 sm:w-6 sm:h-6 mb-2 sm:mb-3", errors.resumeFile ? "text-red-400" : "text-slate-400")} />
               <div className="text-xs sm:text-sm font-bold text-slate-900 mb-1">Click or drag file</div>
-              <div className="text-[10px] sm:text-xs text-slate-500 font-medium">Only PDF up to 5MB</div>
+              <div className="text-[10px] sm:text-xs text-slate-500 font-medium">PDF, DOC, DOCX up to 10MB</div>
             </>
           )}
         </div>

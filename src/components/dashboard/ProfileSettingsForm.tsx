@@ -2,9 +2,10 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { signOut } from 'next-auth/react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   User, Mail, Phone, MapPin, Briefcase, 
-  Globe, FileText, Video, UploadCloud, Loader2, Save, Plus, X, Camera, Mic, StopCircle, RefreshCw, AlertTriangle
+  Globe, FileText, Video, UploadCloud, Loader2, Save, Plus, X, Camera, Mic, StopCircle, RefreshCw, PlayCircle, AlertTriangle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { City } from 'country-state-city';
@@ -64,7 +65,8 @@ export default function ProfileSettingsForm({ userProfile, userId, session, onSa
   const skipSearchRef = useRef(false);
   const locRef = useRef<HTMLDivElement>(null);
 
-  // Delete Account State
+  // Advanced & Delete Settings State
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -161,6 +163,7 @@ export default function ProfileSettingsForm({ userProfile, userId, session, onSa
   };
 
   const [showVideoModal, setShowVideoModal] = useState(false);
+  const [showCurrentVideo, setShowCurrentVideo] = useState(false);
   const [recorderState, setRecorderState] = useState<'idle' | 'recording' | 'review'>('idle');
   const [stream, setStream] = useState<MediaStream | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -267,7 +270,7 @@ export default function ProfileSettingsForm({ userProfile, userId, session, onSa
         const fileData = new FormData();
         fileData.append("file", resumeFile);
         fileData.append("isVideo", "false");
-        fileData.append("folder", "resumes"); // EXPLICIT FOLDER
+        fileData.append("folder", "resumes"); 
         const uploadRes = await fetch('/api/upload', { method: 'POST', body: fileData });
         const uploadData = await uploadRes.json();
         if (!uploadRes.ok) throw new Error(uploadData.error || 'Failed to upload resume');
@@ -279,7 +282,7 @@ export default function ProfileSettingsForm({ userProfile, userId, session, onSa
         const avatarData = new FormData();
         avatarData.append("file", avatarFile);
         avatarData.append("isVideo", "false");
-        avatarData.append("folder", "avatars"); // EXPLICIT FOLDER
+        avatarData.append("folder", "avatars"); 
         const uploadRes = await fetch('/api/upload', { method: 'POST', body: avatarData });
         const uploadData = await uploadRes.json();
         if (!uploadRes.ok) throw new Error(uploadData.error || 'Failed to upload avatar');
@@ -526,77 +529,126 @@ export default function ProfileSettingsForm({ userProfile, userId, session, onSa
             </div>
             
             <div className="space-y-2">
-              <div className="flex justify-between items-center">
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Video Pitch URL</label>
-              </div>
-              <div className="flex gap-2">
-                <input 
-                  name="video_pitch_url" 
-                  value={formData.video_pitch_url} 
-                  onChange={handleChange} 
-                  placeholder="https://youtube.com/..." 
-                  className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-4 focus:ring-slate-100 focus:border-slate-400 outline-none transition-all font-medium" 
-                />
-                <button 
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Video Pitch</label>
+              <div className="w-full border border-slate-200 rounded-xl px-4 py-2.5 flex items-center justify-between bg-slate-50 transition-colors">
+                {formData.video_pitch_url ? (
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-sm font-bold text-slate-700 flex items-center gap-1.5">
+                      <Video className="w-4 h-4 text-rose-500" /> Video pitch recorded
+                    </span>
+                    <button 
+                      type="button" 
+                      onClick={(e) => { e.preventDefault(); setShowCurrentVideo(true); }}
+                      className="text-[11px] font-bold text-blue-600 hover:underline w-fit text-left"
+                    >
+                      Watch Current Video
+                    </button>
+                  </div>
+                ) : (
+                  <span className="text-sm font-medium text-slate-500 flex items-center gap-2">
+                    <Video className="w-4 h-4 text-slate-400" /> No video recorded
+                  </span>
+                )}
+                <button
                   type="button"
                   onClick={() => setShowVideoModal(true)}
-                  className="px-4 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 transition-colors flex items-center gap-2 shadow-sm text-sm"
+                  className="px-4 py-2 bg-slate-900 text-white rounded-lg font-bold hover:bg-slate-800 transition-colors flex items-center gap-2 shadow-sm text-xs sm:text-sm shrink-0"
                 >
-                  <Video className="w-4 h-4" /> Record
+                  <Camera className="w-4 h-4" /> {formData.video_pitch_url ? "Re-record" : "Record"}
                 </button>
               </div>
             </div>
 
             <div className="space-y-2 md:col-span-2">
               <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Resume / CV (PDF, DOCX)</label>
-              <div className="relative">
-                <input 
-                  type="file" 
-                  accept=".pdf,.doc,.docx"
-                  onChange={(e) => {
-                    if (e.target.files && e.target.files[0]) setResumeFile(e.target.files[0]);
-                  }}
-                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" 
-                />
-                <div className={cn(
-                  "w-full border-2 border-dashed rounded-xl px-4 py-6 text-center transition-all flex flex-col items-center justify-center gap-2",
-                  resumeFile ? "border-slate-400 bg-slate-50" : "border-slate-200 hover:border-slate-300 hover:bg-slate-50/50 bg-white"
-                )}>
-                  <UploadCloud className={cn("w-6 h-6", resumeFile ? "text-slate-700" : "text-slate-400")} />
-                  <span className="text-sm font-medium text-slate-600">
-                    {resumeFile ? resumeFile.name : (resumeUrl ? "Upload a new file to replace current CV" : "Click or drag file to upload")}
-                  </span>
-                  {resumeUrl && !resumeFile && (
-                    <a href={resumeUrl} target="_blank" rel="noreferrer" className="text-xs font-bold text-blue-600 hover:underline relative z-20" onClick={e => e.stopPropagation()}>
-                      View Current Resume
-                    </a>
-                  )}
+              
+              {(resumeUrl || resumeFile) ? (
+                <div className="w-full border border-slate-200 rounded-xl p-4 flex items-center justify-between bg-white shadow-sm">
+                  <div className="flex items-center gap-3 overflow-hidden">
+                    <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
+                      <FileText className="w-5 h-5 text-blue-600" />
+                    </div>
+                    <div className="flex flex-col min-w-0">
+                      <span className="text-sm font-bold text-slate-900 truncate">
+                        {resumeFile ? resumeFile.name : "Current Resume"}
+                      </span>
+                      {resumeUrl && !resumeFile && (
+                        <a href={resumeUrl} target="_blank" rel="noreferrer" className="text-xs font-medium text-blue-600 hover:underline w-fit">
+                          Click to view document
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => { setResumeFile(null); setResumeUrl(''); }}
+                    className="p-2 hover:bg-rose-50 text-slate-400 hover:text-rose-600 rounded-lg transition-colors shrink-0"
+                    title="Remove resume"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
                 </div>
-              </div>
+              ) : (
+                <div className="relative">
+                  <input 
+                    type="file" 
+                    accept=".pdf,.doc,.docx"
+                    onChange={(e) => {
+                      if (e.target.files && e.target.files[0]) setResumeFile(e.target.files[0]);
+                    }}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" 
+                  />
+                  <div className="w-full border-2 border-dashed border-slate-200 hover:border-slate-300 hover:bg-slate-50/50 bg-white rounded-xl px-4 py-6 text-center transition-all flex flex-col items-center justify-center gap-2">
+                    <UploadCloud className="w-6 h-6 text-slate-400" />
+                    <span className="text-sm font-medium text-slate-600">
+                      Click or drag file to upload
+                    </span>
+                    <span className="text-xs font-medium text-slate-400">PDF, DOC, DOCX up to 10MB</span>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </section>
 
-        <section className="mt-12 pt-8 border-t border-rose-100">
-          <div className="flex items-center gap-2 mb-4">
-            <AlertTriangle className="w-5 h-5 text-rose-500" />
-            <h3 className="text-lg font-bold text-slate-900">Danger Zone</h3>
-          </div>
-          <div className="bg-rose-50 border border-rose-100 rounded-2xl p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-            <div>
-              <h4 className="font-bold text-rose-900">Delete Account</h4>
-              <p className="text-sm text-rose-700 mt-1 font-medium max-w-xl">
-                Permanently remove your account and all associated applications. This action cannot be undone.
-              </p>
-            </div>
-            <button
-              onClick={() => setShowDeleteModal(true)}
-              type="button"
-              className="px-6 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl transition-colors shadow-md shadow-rose-600/20 shrink-0"
-            >
-              Delete Account
-            </button>
-          </div>
+        {/* Скрытая секция Danger Zone (Advanced Settings) */}
+        <section className="mt-12 pt-8 border-t border-slate-100">
+          <button
+            type="button"
+            onClick={() => setShowAdvanced(!showAdvanced)}
+            className="text-sm font-bold text-slate-400 hover:text-slate-600 transition-colors flex items-center gap-2 outline-none"
+          >
+            {showAdvanced ? "Hide Advanced Settings" : "Show Advanced Settings"}
+          </button>
+
+          <AnimatePresence>
+            {showAdvanced && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                className="overflow-hidden"
+              >
+                <div className="mt-6 bg-rose-50 border border-rose-100 rounded-2xl p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                  <div>
+                    <h4 className="font-bold text-rose-900 flex items-center gap-2">
+                      <AlertTriangle className="w-4 h-4" /> Delete Account
+                    </h4>
+                    <p className="text-sm text-rose-700 mt-1 font-medium max-w-xl">
+                      Permanently remove your account and all associated applications. This action cannot be undone.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setShowDeleteModal(true)}
+                    type="button"
+                    className="px-6 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl transition-colors shadow-md shadow-rose-600/20 shrink-0"
+                  >
+                    Delete Account
+                  </button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </section>
 
       </div>
@@ -612,6 +664,49 @@ export default function ProfileSettingsForm({ userProfile, userId, session, onSa
         </button>
       </div>
 
+      {/* --- ПОКАЗ ТЕКУЩЕГО ВИДЕО --- */}
+      <AnimatePresence>
+        {showCurrentVideo && formData.video_pitch_url && (
+          <div 
+            className="fixed inset-0 z-[9999] bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6"
+            onClick={() => setShowCurrentVideo(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              transition={{ duration: 0.2 }}
+              className="bg-white rounded-3xl w-full max-w-4xl overflow-hidden shadow-2xl flex flex-col"
+              onClick={(e) => e.stopPropagation()} 
+            >
+              <div className="p-4 sm:p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                <h3 className="font-bold text-base sm:text-lg text-slate-900 flex items-center gap-2">
+                  <PlayCircle className="w-5 h-5 text-rose-500" /> Your Video Pitch
+                </h3>
+                <button 
+                  onClick={() => setShowCurrentVideo(false)} 
+                  className="p-2 hover:bg-slate-200 rounded-full transition-colors"
+                >
+                  <X className="w-5 h-5 text-slate-500" />
+                </button>
+              </div>
+              <div className="bg-black w-full aspect-video flex items-center justify-center relative">
+                <video
+                  src={formData.video_pitch_url}
+                  controls
+                  autoPlay
+                  playsInline
+                  className="w-full h-full object-contain"
+                >
+                  Your browser does not support the video tag.
+                </video>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* --- МОДАЛКА ЗАПИСИ --- */}
       {showVideoModal && (
         <div className="fixed inset-0 z-[9999] bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
@@ -662,6 +757,7 @@ export default function ProfileSettingsForm({ userProfile, userId, session, onSa
         </div>
       )}
 
+      {/* --- МОДАЛКА УДАЛЕНИЯ --- */}
       {showDeleteModal && (
         <div className="fixed inset-0 z-[9999] bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl w-full max-w-md overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200 p-6">
