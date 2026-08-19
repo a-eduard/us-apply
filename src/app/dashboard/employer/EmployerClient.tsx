@@ -83,7 +83,7 @@ export default function EmployerClient() {
         method: 'DELETE'
       });
       if (res.ok) {
-        fetchData(); // Перезапрашиваем данные после успешного удаления
+        fetchData();
       } else {
         const errorData = await res.json();
         alert(errorData.error || "Failed to delete candidate.");
@@ -314,10 +314,15 @@ export default function EmployerClient() {
                               <MapPin className="w-3 h-3 shrink-0" /> <span className="truncate">{location}</span>
                             </div>
                           )}
+                          {/* ДОБАВЛЕНА ДАТА РЕГИСТРАЦИИ */}
+                          {candidate.created_at && (
+                            <div className="flex items-center gap-1 text-[11px] font-medium text-slate-400 mt-1 truncate">
+                              <CalendarDays className="w-3 h-3 shrink-0" /> Registered: {new Date(candidate.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                            </div>
+                          )}
                         </div>
                       </div>
 
-                      {/* Кнопка Delete Candidate */}
                       <button
                         onClick={() => setCandidateToDelete(candidate.id)}
                         className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors shrink-0"
