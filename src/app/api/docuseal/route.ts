@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 
-const DOCUSEAL_API_URL = "https://api.docuseal.co/submissions";
+const DOCUSEAL_API_URL = "https://sign.getbiz.me/api/submissions";
 const DOCUSEAL_API_KEY = process.env.DOCUSEAL_API_KEY;
 const DOCUSEAL_TEMPLATE_ID = process.env.DOCUSEAL_TEMPLATE_ID;
 
