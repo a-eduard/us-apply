@@ -16,11 +16,10 @@ export async function POST(req: Request) {
     const candidateEmail = session.user.email || "";
     
     const body = await req.json();
-    const { campaign_id, application_data } = body;
+    const { campaign_id, partner_slug, application_data } = body;
     
-    if (!campaign_id) {
-      return NextResponse.json({ error: "Invalid campaign ID" }, { status: 400 });
-    }
+    // REMOVED: Strict check for campaign_id or partner_slug. 
+    // Now allows general onboarding submissions.
 
     const { 
       firstName, 
@@ -36,10 +35,13 @@ export async function POST(req: Request) {
 
     const candidateFullName = `${firstName || ""} ${lastName || ""}`.trim() || session.user.name || "Candidate";
 
-    const campaign = await prisma.campaigns.findUnique({
-      where: { id: campaign_id },
-      include: { users: true }
-    });
+    let campaign = null;
+    if (campaign_id) {
+      campaign = await prisma.campaigns.findUnique({
+        where: { id: campaign_id },
+        include: { users: true }
+      });
+    }
 
     const serializedNiches = Array.isArray(niches) ? JSON.stringify(niches) : niches;
 
@@ -54,13 +56,14 @@ export async function POST(req: Request) {
       niche: serializedNiches || undefined,
     };
 
-    // 1. СОХРАНЯЕМ ИЛИ ОБНОВЛЯЕМ ЗАЯВКУ
+    // 1. SAVE OR UPDATE APPLICATION
     const existingApp = await prisma.applications.findFirst({
-      where: { user_id: authUserId, campaign_id: campaign_id }
+      where: { user_id: authUserId, campaign_id: campaign_id || null }
     });
 
+    let savedApplication;
     if (existingApp) {
-      await prisma.applications.update({
+      savedApplication = await prisma.applications.update({
         where: { id: existingApp.id },
         data: {
           ...appDataToSave,
@@ -68,16 +71,16 @@ export async function POST(req: Request) {
         }
       });
     } else {
-      await prisma.applications.create({
+      savedApplication = await prisma.applications.create({
         data: {
           user_id: authUserId,
-          campaign_id: campaign_id,
+          campaign_id: campaign_id || null,
           ...appDataToSave
         }
       });
     }
 
-    // 2. ОБНОВЛЯЕМ ГЛОБАЛЬНЫЙ ПРОФИЛЬ КАНДИДАТА
+    // 2. UPDATE GLOBAL CANDIDATE PROFILE
     await prisma.users.update({
       where: { id: authUserId },
       data: {
@@ -90,10 +93,11 @@ export async function POST(req: Request) {
         resume_url: resumeUrl || undefined,
         years_of_experience: yearsOfExperience || undefined,
         niches: serializedNiches || undefined,
+        referred_by_partner_id: partner_slug || undefined, // Save partner tracking
       }
     });
 
-    // 3. ОТПРАВЛЯЕМ УВЕДОМЛЕНИЯ
+    // 3. SEND NOTIFICATIONS (Only if associated with a specific campaign)
     if (campaign) {
       const campaignTitle = campaign.title || "Job Position";
       
@@ -113,7 +117,8 @@ export async function POST(req: Request) {
       }
     }
 
-    return NextResponse.json({ success: true });
+    // Return the application ID so the Wizard can use it to generate the DocuSeal link
+    return NextResponse.json({ success: true, id: savedApplication.id });
   } catch (error: any) {
     console.error("Application Submission Error EXACT:", error.message || error);
     return NextResponse.json({ error: "Failed to submit application", details: error.message }, { status: 500 });

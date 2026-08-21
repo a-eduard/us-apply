@@ -12,9 +12,9 @@ import { cn } from "@/lib/utils";
 import StepOne from "@/components/wizard/StepOne";
 import StepTwo from "@/components/wizard/StepTwo";
 import StepThree from "@/components/wizard/StepThree";
-import StepFour from "@/components/wizard/StepFour"; // ADDED: StepFour import
+import StepFour from "@/components/wizard/StepFour"; 
 
-const STEPS = ["Basic Info", "Experience", "Video Pitch", "Contract"]; // ALREADY UPDATED
+const STEPS = ["Basic Info", "Experience", "Video Pitch", "Contract"];
 
 interface WizardClientProps {
   initialStep: number;
@@ -33,11 +33,22 @@ export default function WizardClient({ initialStep }: WizardClientProps) {
   const [showSuccess, setShowSuccess] = useState(false);
   const [isDraftLoaded, setIsDraftLoaded] = useState(false);
   
-  // ADDED: State to store the created Application ID for DocuSeal
   const [applicationId, setApplicationId] = useState<number | null>(null);
-
+  
   const { width, height } = useWindowSize();
+  
+  // ADDED: Capture both campaignId and partner slug from URL
   const campaignId = searchParams.get("campaignId") || "";
+  const partnerSlug = searchParams.get("partner") || "";
+
+  // HELPER: Build query string to preserve parameters between steps
+  const buildQueryString = () => {
+    const params = new URLSearchParams();
+    if (campaignId) params.append("campaignId", campaignId);
+    if (partnerSlug) params.append("partner", partnerSlug);
+    const queryString = params.toString();
+    return queryString ? `?${queryString}` : "";
+  };
 
   const [formData, setFormData] = useState({
     firstName: "",
@@ -56,17 +67,14 @@ export default function WizardClient({ initialStep }: WizardClientProps) {
     setMaxReachedStep((prev) => Math.max(prev, step));
   }, [step]);
 
-  // ЗАЩИТА: Не даем гостям прыгать сразу на 2 или 3 шаг
   useEffect(() => {
     if (status === "unauthenticated" && step > 0) {
-      const query = campaignId ? `?campaignId=${campaignId}` : '';
-      router.replace(`/wizard/step-1${query}`);
+      router.replace(`/wizard/step-1${buildQueryString()}`);
     }
-  }, [status, step, router, campaignId]);
+  }, [status, step, router, campaignId, partnerSlug]);
 
   useEffect(() => {
     const fetchDraft = async () => {
-      // Если это просто регистрация без кампании, пропускаем черновик
       if (!campaignId) {
         setIsDraftLoaded(true);
         return;
@@ -101,8 +109,7 @@ export default function WizardClient({ initialStep }: WizardClientProps) {
 
   const handleNext = () => {
     const nextStep = Math.min(step + 1, STEPS.length - 1);
-    const query = campaignId ? `?campaignId=${campaignId}` : '';
-    router.push(`/wizard/step-${nextStep + 1}${query}`);
+    router.push(`/wizard/step-${nextStep + 1}${buildQueryString()}`);
   };
 
   const handleFormDataChange = (data: any) => {
@@ -110,14 +117,9 @@ export default function WizardClient({ initialStep }: WizardClientProps) {
   };
 
   const handleSubmit = async (finalData: any = formData) => {
-    // 1. Если нет кампании (Простая регистрация),
-    // данные в профиль уже сохранились на Шаге 1 и 2. Мы просто перекидываем в Дашборд.
-    if (!campaignId) {
-      router.push('/dashboard/candidate');
-      return;
-    }
+    // REMOVED: The check that redirects to dashboard if no campaignId or partnerSlug is present.
+    // Now, EVERY user will go through the API and proceed to Step 4.
 
-    // 2. Если есть кампания - отправляем финальную заявку
     try {
       const res = await fetch('/api/applications', {
         method: 'POST',
@@ -125,7 +127,8 @@ export default function WizardClient({ initialStep }: WizardClientProps) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          campaign_id: parseInt(campaignId, 10),
+          campaign_id: campaignId ? parseInt(campaignId, 10) : undefined,
+          partner_slug: partnerSlug || undefined,
           application_data: finalData
         }),
       });
@@ -137,16 +140,15 @@ export default function WizardClient({ initialStep }: WizardClientProps) {
 
       const responseData = await res.json();
       
-      // UPDATED: Instead of showing success immediately, save ID and go to Step 4 (Contract)
+      // Transition to Step 4
       if (responseData.id || responseData.applicationId) {
-        setApplicationId(responseData.id || responseData.applicationId);
-        setStep(3); // Move UI to Step 4 (index 3)
-        router.push(`/wizard/step-4?campaignId=${campaignId}`);
+        const generatedAppId = responseData.id || responseData.applicationId;
+        setApplicationId(generatedAppId);
+        setStep(3); 
+        router.push(`/wizard/step-4${buildQueryString()}`);
       } else {
-        // Fallback just in case ID is not returned
         setShowSuccess(true);
       }
-
     } catch (error) {
       console.error("Submission error:", error);
       alert("Something went wrong during submission. Please try again.");
@@ -154,7 +156,6 @@ export default function WizardClient({ initialStep }: WizardClientProps) {
   };
 
   const handleContractComplete = () => {
-    // Called when DocuSeal finishes successfully
     setShowSuccess(true);
   };
 
@@ -179,7 +180,7 @@ export default function WizardClient({ initialStep }: WizardClientProps) {
             <CheckCircle2 className="w-8 h-8 sm:w-10 sm:h-10 text-emerald-600" />
           </div>
           <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-3 sm:mb-4">Application Submitted!</h2>
-          <p className="text-sm sm:text-lg text-slate-600 mb-6 sm:mb-8">Your application has been successfully sent to the employer for this position.</p>
+          <p className="text-sm sm:text-lg text-slate-600 mb-6 sm:mb-8">Your application has been successfully sent. You can now access your dashboard.</p>
           <button 
             onClick={() => router.push('/dashboard/candidate')}
             className="w-full bg-blue-600 text-white font-bold py-3.5 sm:py-4 rounded-xl hover:bg-blue-700 transition-colors shadow-lg shadow-blue-600/30"
@@ -193,7 +194,6 @@ export default function WizardClient({ initialStep }: WizardClientProps) {
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans text-slate-900 overflow-hidden">
-      {/* Navbar with Correct Logo */}
       <nav className="h-14 sm:h-16 bg-white border-b border-slate-200 px-4 sm:px-8 flex items-center justify-between shrink-0 shadow-sm relative z-50">
         <div 
           className="flex items-center gap-2 cursor-pointer group" 
@@ -206,7 +206,6 @@ export default function WizardClient({ initialStep }: WizardClientProps) {
         </div>
       </nav>
 
-      {/* Stepper Header */}
       <div className="bg-white px-4 sm:px-12 py-4 sm:py-6 flex flex-col items-center shrink-0 shadow-sm z-10 relative">
         <div className="flex items-center w-full max-w-3xl justify-between relative">
           <div className="absolute left-0 top-1/2 -translate-y-1/2 w-full h-0.5 bg-slate-200 z-0"></div>
@@ -232,8 +231,7 @@ export default function WizardClient({ initialStep }: WizardClientProps) {
                     }
                     return;
                   }
-                  const query = campaignId ? `?campaignId=${campaignId}` : '';
-                  router.push(`/wizard/step-${i + 1}${query}`);
+                  router.push(`/wizard/step-${i + 1}${buildQueryString()}`);
                 }}
                 className={cn(
                   "flex items-center gap-2.5 focus:outline-none bg-white z-10 px-2 sm:px-3", 
@@ -261,7 +259,6 @@ export default function WizardClient({ initialStep }: WizardClientProps) {
           })}
         </div>
         
-        {/* Mobile Step Label (Visible only on small screens) */}
         <div className="mt-3 text-center sm:hidden w-full">
           <span className="text-xs font-extrabold text-blue-600 uppercase tracking-widest">
             Step {step + 1}: {STEPS[step]}
@@ -308,7 +305,6 @@ export default function WizardClient({ initialStep }: WizardClientProps) {
                 campaignId={campaignId}
               />
             )}
-            {/* ADDED: StepFour implementation */}
             {step === 3 && (
               <StepFour 
                 applicationId={applicationId as number} 

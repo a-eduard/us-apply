@@ -21,8 +21,11 @@ C:.
 ¦   ¦           
 ¦   +---api
 ¦   ¦   +---admin
-¦   ¦   ¦       route.ts
-¦   ¦   ¦       
+¦   ¦   ¦   ¦   route.ts
+¦   ¦   ¦   ¦   
+¦   ¦   ¦   L---kill-locks
+¦   ¦   ¦           route.ts
+¦   ¦   ¦           
 ¦   ¦   +---applications
 ¦   ¦   ¦   ¦   route.ts
 ¦   ¦   ¦   ¦   
@@ -62,11 +65,20 @@ C:.
 ¦   ¦   ¦   L---explore
 ¦   ¦   ¦           route.ts
 ¦   ¦   ¦           
+¦   ¦   +---docuseal
+¦   ¦   ¦       route.ts
+¦   ¦   ¦       
 ¦   ¦   +---employer
-¦   ¦   ¦   L---campaigns
+¦   ¦   ¦   +---campaigns
+¦   ¦   ¦   ¦   ¦   route.ts
+¦   ¦   ¦   ¦   ¦   
+¦   ¦   ¦   ¦   L---[campaignId]
+¦   ¦   ¦   ¦           route.ts
+¦   ¦   ¦   ¦           
+¦   ¦   ¦   L---candidates
 ¦   ¦   ¦       ¦   route.ts
 ¦   ¦   ¦       ¦   
-¦   ¦   ¦       L---[campaignId]
+¦   ¦   ¦       L---[candidateId]
 ¦   ¦   ¦               route.ts
 ¦   ¦   ¦               
 ¦   ¦   +---screening
@@ -83,16 +95,21 @@ C:.
 ¦   ¦   ¦   L---presign
 ¦   ¦   ¦           route.ts
 ¦   ¦   ¦           
-¦   ¦   L---users
-¦   ¦       L---[userId]
-¦   ¦           +---applications
-¦   ¦           ¦       route.ts
-¦   ¦           ¦       
-¦   ¦           L---profile
-¦   ¦                   route.ts
-¦   ¦                   
+¦   ¦   +---users
+¦   ¦   ¦   L---[userId]
+¦   ¦   ¦       +---applications
+¦   ¦   ¦       ¦       route.ts
+¦   ¦   ¦       ¦       
+¦   ¦   ¦       L---profile
+¦   ¦   ¦               route.ts
+¦   ¦   ¦               
+¦   ¦   L---webhooks
+¦   ¦       L---docuseal
+¦   ¦               route.ts
+¦   ¦               
 ¦   +---campaign
 ¦   ¦   L---[id]
+¦   ¦           ApplyButton.tsx
 ¦   ¦           page.tsx
 ¦   ¦           
 ¦   +---dashboard
@@ -136,6 +153,7 @@ C:.
 ¦   ¦       
 ¦   L---wizard
 ¦           LinkedInAuthButton.tsx
+¦           StepFour.tsx
 ¦           StepOne.tsx
 ¦           StepThree.tsx
 ¦           StepTwo.tsx
