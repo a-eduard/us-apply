@@ -17,7 +17,8 @@ export default async function WizardPage({ params }: WizardPageProps) {
   const stepNumber = parseInt(stepParam.replace("step-", ""), 10);
 
   // 3. If the step is invalid, return a 404
-  if (isNaN(stepNumber) || stepNumber < 1 || stepNumber > 3) {
+  // UPDATED: Now supporting 4 steps (including DocuSeal Agreement)
+  if (isNaN(stepNumber) || stepNumber < 1 || stepNumber > 4) {
     notFound();
   }
 

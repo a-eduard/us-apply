@@ -12,8 +12,9 @@ import { cn } from "@/lib/utils";
 import StepOne from "@/components/wizard/StepOne";
 import StepTwo from "@/components/wizard/StepTwo";
 import StepThree from "@/components/wizard/StepThree";
+import StepFour from "@/components/wizard/StepFour"; // ADDED: StepFour import
 
-const STEPS = ["Basic Info", "Experience", "Video Pitch"];
+const STEPS = ["Basic Info", "Experience", "Video Pitch", "Contract"]; // ALREADY UPDATED
 
 interface WizardClientProps {
   initialStep: number;
@@ -32,6 +33,9 @@ export default function WizardClient({ initialStep }: WizardClientProps) {
   const [showSuccess, setShowSuccess] = useState(false);
   const [isDraftLoaded, setIsDraftLoaded] = useState(false);
   
+  // ADDED: State to store the created Application ID for DocuSeal
+  const [applicationId, setApplicationId] = useState<number | null>(null);
+
   const { width, height } = useWindowSize();
   const campaignId = searchParams.get("campaignId") || "";
 
@@ -131,11 +135,27 @@ export default function WizardClient({ initialStep }: WizardClientProps) {
         throw new Error(errorData.error || 'Failed to submit application');
       }
 
-      setShowSuccess(true);
+      const responseData = await res.json();
+      
+      // UPDATED: Instead of showing success immediately, save ID and go to Step 4 (Contract)
+      if (responseData.id || responseData.applicationId) {
+        setApplicationId(responseData.id || responseData.applicationId);
+        setStep(3); // Move UI to Step 4 (index 3)
+        router.push(`/wizard/step-4?campaignId=${campaignId}`);
+      } else {
+        // Fallback just in case ID is not returned
+        setShowSuccess(true);
+      }
+
     } catch (error) {
       console.error("Submission error:", error);
       alert("Something went wrong during submission. Please try again.");
     }
+  };
+
+  const handleContractComplete = () => {
+    // Called when DocuSeal finishes successfully
+    setShowSuccess(true);
   };
 
   if (status === "loading" || (!isDraftLoaded && status === "authenticated")) {
@@ -286,6 +306,16 @@ export default function WizardClient({ initialStep }: WizardClientProps) {
                   handleSubmit({ ...formData, ...data });
                 }}
                 campaignId={campaignId}
+              />
+            )}
+            {/* ADDED: StepFour implementation */}
+            {step === 3 && (
+              <StepFour 
+                applicationId={applicationId as number} 
+                email={formData.email || session?.user?.email || ""}
+                firstName={formData.firstName}
+                lastName={formData.lastName}
+                onComplete={handleContractComplete}
               />
             )}
           </motion.div>

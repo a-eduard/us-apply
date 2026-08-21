@@ -70,18 +70,11 @@ const ACCEPTED_TYPES = [
   "audio/mp3", "audio/webm", "audio/mp4", "audio/mpeg"
 ];
 
+// src/schemas/wizard.ts
+
 export const StepThreeSchema = z.object({
   pitchMethod: z.enum(["video", "audio"]),
-  mediaFile: z.any()
-    .refine((file) => file, "Please record a video or audio pitch before proceeding")
-    .refine(
-      (file) => file?.size <= MAX_MEDIA_SIZE,
-      "Recording is too large. Maximum size is 50 MB."
-    )
-    .refine(
-      (file) => ACCEPTED_TYPES.includes(file?.type),
-      "Unsupported format. Please record using the browser."
-    ),
+  mediaFile: z.any().optional(), // TEMPORARY: Made optional for testing Step 4
 });
 
 export const generateScreeningSchema = (questions: Array<{ id: string; type: string; isRequired: boolean }>) => {

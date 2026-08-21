@@ -75,6 +75,12 @@ model applications {
   state                  String?    @db.VarChar(100)
   screening_data         String?    @db.LongText
   employer_notes         String?    @db.Text
+  
+  // New DocuSeal fields
+  docusealSubmissionId   String?    @db.VarChar(255)
+  contractStatus         String     @default("PENDING") @db.VarChar(50)
+  contractSignedAt       DateTime?  @db.Timestamp(0)
+
   campaigns              campaigns? @relation(fields: [campaign_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "applications_campaign_id_campaigns_id_fk")
   users                  users?     @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "applications_user_id_users_id_fk")
 
@@ -305,4 +311,18 @@ model users {
   employer_profiles               employer_profiles?
   ledger                          ledger[]
   universities                    universities?
+  agreements                      agreements?
+}
+
+model agreements {
+  id                     Int       @id @default(autoincrement())
+  user_id                Int       @unique
+  docuseal_submission_id String?   @db.VarChar(255)
+  status                 String?   @default("PENDING") @db.VarChar(50)
+  document_url           String?   @db.VarChar(500)
+  created_at             DateTime? @default(now()) @db.Timestamp(0)
+  updated_at             DateTime? @default(now()) @updatedAt @db.Timestamp(0)
+  users                  users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Restrict)
+
+  @@index([user_id], map: "agreements_user_id_index")
 }

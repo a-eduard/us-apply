@@ -31,10 +31,13 @@ const StepThree = forwardRef(function StepThree({
   useImperativeHandle(ref, () => ({
     getValues: () => getValues(),
     validateAndSubmit: async () => {
+      // TEMPORARILY DISABLED: Check for mandatory media file to test Step 4
+      /*
       if (!mediaFile) {
         setError('mediaFile', { type: 'manual', message: 'Please record a video pitch to submit your application.' });
         return false;
       }
+      */
       
       const isValid = await trigger();
       if (isValid) {
@@ -171,53 +174,60 @@ const StepThree = forwardRef(function StepThree({
   };
 
   const submitForm = async () => {
+    // TEMPORARILY DISABLED: Allow skipping video upload
+    /*
     if (!mediaFile) {
       setError('mediaFile', { type: 'manual', message: 'Please record a video pitch to submit your application.' });
       return;
     }
+    */
     
     setIsUploading(true);
     try {
-      // 1. Get presigned URL
-      const presignRes = await fetch('/api/upload/presign', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          fileName: mediaFile.name,
-          fileType: mediaFile.type,
-          isVideo: true
-        })
-      });
-      const presignData = await presignRes.json();
-      
-      if (!presignRes.ok) throw new Error(presignData.error || 'Failed to get upload URL');
+      let videoPitchUrl = null;
 
-      // 2. Upload file to AWS S3
-      const uploadRes = await fetch(presignData.uploadUrl, {
-        method: 'PUT',
-        headers: { 'Content-Type': mediaFile.type },
-        body: mediaFile
-      });
-      
-      if (!uploadRes.ok) throw new Error('Failed to upload to S3');
-      
-      const videoPitchUrl = presignData.publicUrl;
-      const userId = session?.user ? (session.user as any).id : null;
-
-      // 3. Save URL to Profile
-      if (userId) {
-        await fetch(`/api/users/${userId}/profile`, {
-          method: 'PATCH',
+      // Only run S3 upload if a media file was actually recorded
+      if (mediaFile) {
+        // 1. Get presigned URL
+        const presignRes = await fetch('/api/upload/presign', {
+          method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ video_pitch_url: videoPitchUrl })
+          body: JSON.stringify({
+            fileName: mediaFile.name,
+            fileType: mediaFile.type,
+            isVideo: true
+          })
         });
+        const presignData = await presignRes.json();
+        
+        if (!presignRes.ok) throw new Error(presignData.error || 'Failed to get upload URL');
+
+        // 2. Upload file to AWS S3
+        const uploadRes = await fetch(presignData.uploadUrl, {
+          method: 'PUT',
+          headers: { 'Content-Type': mediaFile.type },
+          body: mediaFile
+        });
+        
+        if (!uploadRes.ok) throw new Error('Failed to upload to S3');
+        
+        videoPitchUrl = presignData.publicUrl;
+        const userId = session?.user ? (session.user as any).id : null;
+
+        // 3. Save URL to Profile
+        if (userId) {
+          await fetch(`/api/users/${userId}/profile`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ video_pitch_url: videoPitchUrl })
+          });
+        }
       }
 
+      // Proceed to the next step (Step 4) whether video is present or not
       onNext({ pitchMethod: 'video', videoPitchUrl });
     } catch (err) {
       console.error("Upload Error:", err);
-      // TODO: Handle upload error gracefully in the UI instead of using alert()
-      // alert('Upload failed. Please try again.');
       setIsUploading(false);
     } 
   };
@@ -274,7 +284,7 @@ const StepThree = forwardRef(function StepThree({
       {recorderState === 'idle' && (
         <div className="pt-4 sm:pt-6 border-t border-slate-100">
           <button type="submit" disabled={isUploading} className="w-full py-3.5 sm:py-4 font-bold text-sm sm:text-base rounded-xl bg-blue-600 hover:bg-blue-700 text-white transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-600/20 active:scale-[0.98] disabled:opacity-70">
-            {isUploading ? <><Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" /> Processing...</> : <><CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5" /> {campaignId ? "Submit Application" : "Complete Profile"}</>}
+            {isUploading ? <><Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" /> Processing...</> : <><CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5" /> {campaignId ? "Continue to Agreement" : "Continue to Agreement"}</>}
           </button>
         </div>
       )}
@@ -285,7 +295,7 @@ const StepThree = forwardRef(function StepThree({
              <RefreshCw className="w-4 h-4 sm:w-5 sm:h-5" /> Retake
            </button>
            <button type="submit" disabled={isUploading} className="w-full sm:flex-1 py-3 sm:py-3.5 text-sm sm:text-base font-bold rounded-xl bg-blue-600 hover:bg-blue-700 text-white transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-600/20 active:scale-[0.98] disabled:opacity-70">
-             {isUploading ? <><Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" /> Uploading...</> : <><CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5" /> {campaignId ? "Submit Application" : "Complete Profile"}</>}
+             {isUploading ? <><Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" /> Uploading...</> : <><CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5" /> {campaignId ? "Continue to Agreement" : "Continue to Agreement"}</>}
            </button>
         </div>
       )}
