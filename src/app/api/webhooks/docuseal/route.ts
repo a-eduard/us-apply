@@ -1,11 +1,33 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import crypto from "crypto";
 
 export async function POST(req: Request) {
   try {
-    const payload = await req.json();
+    // 1. Read the raw body as text for accurate signature verification
+    const rawBody = await req.text();
+    
+    // 2. Get the signature from headers and the secret from environment variables
+    const signatureHeader = req.headers.get("X-Docuseal-Signature");
+    const secret = process.env.DOCUSEAL_WEBHOOK_SECRET;
 
-    // Log the payload for debugging purposes (you can remove this later)
+    // 3. Verify the signature if the secret is configured
+    if (secret && signatureHeader) {
+      const expectedSignature = crypto
+        .createHmac("sha256", secret)
+        .update(rawBody)
+        .digest("hex");
+
+      if (expectedSignature !== signatureHeader) {
+        console.error("Invalid DocuSeal Webhook Signature.");
+        return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
+      }
+    } else if (!secret) {
+      console.warn("DOCUSEAL_WEBHOOK_SECRET is not set. Skipping signature verification.");
+    }
+
+    // 4. Parse the body now that it is verified
+    const payload = JSON.parse(rawBody);
     console.log("DocuSeal Webhook Payload:", JSON.stringify(payload, null, 2));
 
     const { event, data } = payload;
@@ -34,7 +56,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: true, message: "Contract marked as signed." }, { status: 200 });
     }
 
-    // Acknowledge other events (like 'submission.created' or 'submission.declined') without action for now
+    // Acknowledge other events without action
     return NextResponse.json({ success: true, message: "Event ignored." }, { status: 200 });
 
   } catch (error) {
