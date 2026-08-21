@@ -6,10 +6,10 @@ import { Loader2, AlertCircle } from "lucide-react";
 import { motion } from "framer-motion";
 
 interface StepFourProps {
-  applicationId: number;
-  email: string;
-  firstName: string;
-  lastName: string;
+  applicationId?: number | null;
+  email?: string;
+  firstName?: string;
+  lastName?: string;
   onComplete: () => void;
 }
 
@@ -28,18 +28,13 @@ export default function StepFour({
     const fetchContractUrl = async () => {
       try {
         setLoading(true);
-        // Requesting the URL from our new Next.js API route
         const res = await fetch("/api/docuseal", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({
-            applicationId,
-            email,
-            firstName,
-            lastName,
-          }),
+          // Backend will auto-resolve applicationId if it's undefined
+          body: JSON.stringify({ applicationId, email, firstName, lastName }),
         });
 
         const data = await res.json();
@@ -56,12 +51,7 @@ export default function StepFour({
       }
     };
 
-    if (applicationId && email) {
-      fetchContractUrl();
-    } else {
-      setError("Missing applicant information.");
-      setLoading(false);
-    }
+    fetchContractUrl();
   }, [applicationId, email, firstName, lastName]);
 
   return (
@@ -100,7 +90,7 @@ export default function StepFour({
           <DocusealForm
             host={new URL(docusealUrl).host}
             src={docusealUrl}
-            email={email}
+            email={email || ""}
             onComplete={onComplete}
           />
         </motion.div>

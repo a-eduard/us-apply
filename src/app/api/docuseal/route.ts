@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma"; // Fixed import here
+import { prisma } from "@/lib/prisma";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth";
 
 const DOCUSEAL_API_URL = "https://api.docuseal.co/submissions";
 const DOCUSEAL_API_KEY = process.env.DOCUSEAL_API_KEY;
@@ -7,25 +9,37 @@ const DOCUSEAL_TEMPLATE_ID = process.env.DOCUSEAL_TEMPLATE_ID;
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
-    const { applicationId, email, firstName, lastName } = body;
-
-    if (!applicationId || !email) {
-      return NextResponse.json(
-        { error: "Application ID and Email are required" },
-        { status: 400 }
-      );
+    const session = await getServerSession(authOptions);
+    
+    if (!session || !session.user || !(session.user as any).id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const authUserId = parseInt((session.user as any).id, 10);
+    const body = await req.json();
+    let { applicationId, email, firstName, lastName } = body;
+
+    // SMART RECOVERY: If frontend lost the ID, find the latest application for this user
+    if (!applicationId) {
+      const latestApp = await prisma.applications.findFirst({
+        where: { user_id: authUserId },
+        orderBy: { created_at: 'desc' }
+      });
+      
+      if (!latestApp) {
+        return NextResponse.json({ error: "Application not found in database" }, { status: 404 });
+      }
+      applicationId = latestApp.id;
+    }
+
+    const candidateEmail = email || session.user.email;
+    const candidateName = `${firstName || ""} ${lastName || ""}`.trim() || session.user.name || "Candidate";
 
     if (!DOCUSEAL_API_KEY || !DOCUSEAL_TEMPLATE_ID) {
       console.error("DocuSeal API credentials are not set in .env");
-      return NextResponse.json(
-        { error: "Internal server configuration error" },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: "Internal server configuration error" }, { status: 500 });
     }
 
-    // Call DocuSeal API to create a submission
     const docusealResponse = await fetch(DOCUSEAL_API_URL, {
       method: "POST",
       headers: {
@@ -34,12 +48,12 @@ export async function POST(req: Request) {
       },
       body: JSON.stringify({
         template_id: Number(DOCUSEAL_TEMPLATE_ID),
-        send_email: false, // We will show it inline in the Wizard
+        send_email: false, 
         submitters: [
           {
-            role: "Candidate", // Update this if your template uses a different role name
-            email: email,
-            name: `${firstName || ""} ${lastName || ""}`.trim(),
+            role: "Candidate", 
+            email: candidateEmail,
+            name: candidateName,
           },
         ],
       }),
@@ -48,10 +62,7 @@ export async function POST(req: Request) {
     if (!docusealResponse.ok) {
       const errorData = await docusealResponse.json();
       console.error("DocuSeal API Error:", errorData);
-      return NextResponse.json(
-        { error: "Failed to create DocuSeal submission" },
-        { status: docusealResponse.status }
-      );
+      return NextResponse.json({ error: "Failed to create DocuSeal submission" }, { status: docusealResponse.status });
     }
 
     const data = await docusealResponse.json();
@@ -72,9 +83,6 @@ export async function POST(req: Request) {
     });
   } catch (error) {
     console.error("Error generating DocuSeal URL:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

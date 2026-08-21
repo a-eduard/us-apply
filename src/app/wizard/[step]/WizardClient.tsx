@@ -37,11 +37,9 @@ export default function WizardClient({ initialStep }: WizardClientProps) {
   
   const { width, height } = useWindowSize();
   
-  // ADDED: Capture both campaignId and partner slug from URL
   const campaignId = searchParams.get("campaignId") || "";
   const partnerSlug = searchParams.get("partner") || "";
 
-  // HELPER: Build query string to preserve parameters between steps
   const buildQueryString = () => {
     const params = new URLSearchParams();
     if (campaignId) params.append("campaignId", campaignId);
@@ -117,9 +115,6 @@ export default function WizardClient({ initialStep }: WizardClientProps) {
   };
 
   const handleSubmit = async (finalData: any = formData) => {
-    // REMOVED: The check that redirects to dashboard if no campaignId or partnerSlug is present.
-    // Now, EVERY user will go through the API and proceed to Step 4.
-
     try {
       const res = await fetch('/api/applications', {
         method: 'POST',
@@ -140,14 +135,16 @@ export default function WizardClient({ initialStep }: WizardClientProps) {
 
       const responseData = await res.json();
       
-      // Transition to Step 4
+      // GUARANTEED TRANSITION TO STEP 4
       if (responseData.id || responseData.applicationId) {
         const generatedAppId = responseData.id || responseData.applicationId;
         setApplicationId(generatedAppId);
         setStep(3); 
         router.push(`/wizard/step-4${buildQueryString()}`);
       } else {
-        setShowSuccess(true);
+        // Fallback safely just in case backend didn't return ID
+        setStep(3);
+        router.push(`/wizard/step-4${buildQueryString()}`);
       }
     } catch (error) {
       console.error("Submission error:", error);
@@ -180,7 +177,7 @@ export default function WizardClient({ initialStep }: WizardClientProps) {
             <CheckCircle2 className="w-8 h-8 sm:w-10 sm:h-10 text-emerald-600" />
           </div>
           <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-3 sm:mb-4">Application Submitted!</h2>
-          <p className="text-sm sm:text-lg text-slate-600 mb-6 sm:mb-8">Your application has been successfully sent. You can now access your dashboard.</p>
+          <p className="text-sm sm:text-lg text-slate-600 mb-6 sm:mb-8">Your application and agreement have been successfully processed.</p>
           <button 
             onClick={() => router.push('/dashboard/candidate')}
             className="w-full bg-blue-600 text-white font-bold py-3.5 sm:py-4 rounded-xl hover:bg-blue-700 transition-colors shadow-lg shadow-blue-600/30"
@@ -307,7 +304,7 @@ export default function WizardClient({ initialStep }: WizardClientProps) {
             )}
             {step === 3 && (
               <StepFour 
-                applicationId={applicationId as number} 
+                applicationId={applicationId} 
                 email={formData.email || session?.user?.email || ""}
                 firstName={formData.firstName}
                 lastName={formData.lastName}
