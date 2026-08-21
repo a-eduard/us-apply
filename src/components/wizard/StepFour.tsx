@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Loader2, AlertCircle, FileSignature, CheckCircle2, ExternalLink } from "lucide-react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface StepFourProps {
   applicationId?: number | null;
