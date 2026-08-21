@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { DocusealForm } from "@docuseal/react";
-import { Loader2, AlertCircle } from "lucide-react";
+import { Loader2, AlertCircle, ExternalLink } from "lucide-react";
 import { motion } from "framer-motion";
 
 interface StepFourProps {
@@ -33,7 +33,6 @@ export default function StepFour({
           headers: {
             "Content-Type": "application/json",
           },
-          // Backend will auto-resolve applicationId if it's undefined
           body: JSON.stringify({ applicationId, email, firstName, lastName }),
         });
 
@@ -55,7 +54,7 @@ export default function StepFour({
   }, [applicationId, email, firstName, lastName]);
 
   return (
-    <div className="w-full max-w-3xl mx-auto bg-white p-6 sm:p-10 rounded-2xl shadow-sm border border-slate-200">
+    <div className="w-full max-w-4xl mx-auto bg-white p-6 sm:p-10 rounded-2xl shadow-sm border border-slate-200">
       <div className="text-center mb-8">
         <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-2">
           Sign the Agreement
@@ -85,14 +84,40 @@ export default function StepFour({
         <motion.div 
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="rounded-xl overflow-hidden border border-slate-200 bg-slate-50 min-h-[600px]"
+          className="flex flex-col gap-6"
         >
-          <DocusealForm
-            host={new URL(docusealUrl).host}
-            src={docusealUrl}
-            email={email || ""}
-            onComplete={onComplete}
-          />
+          {/* Fallback button to bypass iframe blocks completely */}
+          <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="text-sm text-blue-800 font-medium">
+              Having trouble viewing the document below? 
+            </div>
+            <a 
+              href={docusealUrl} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 bg-blue-600 text-white px-5 py-2.5 rounded-lg font-bold hover:bg-blue-700 transition-colors whitespace-nowrap text-sm"
+            >
+              Open in New Tab <ExternalLink className="w-4 h-4" />
+            </a>
+          </div>
+
+          <div className="rounded-xl overflow-hidden border border-slate-200 bg-slate-50 min-h-[600px] relative">
+            <DocusealForm
+              host={docusealUrl ? new URL(docusealUrl).host : undefined}
+              src={docusealUrl}
+              email={""} 
+              onComplete={onComplete}
+            />
+          </div>
+          
+          <div className="text-center mt-4">
+            <button 
+              onClick={onComplete}
+              className="text-sm text-slate-500 hover:text-slate-700 font-medium underline"
+            >
+              I have already signed the agreement
+            </button>
+          </div>
         </motion.div>
       ) : null}
     </div>
