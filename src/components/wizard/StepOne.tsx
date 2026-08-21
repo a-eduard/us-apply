@@ -125,7 +125,7 @@ const StepOne = forwardRef(function StepOne({
     try {
       let currentUserId = session?.user ? (session.user as any).id : null;
 
-      // 1. ЕСЛИ ГОСТЬ - РЕГИСТРИРУЕМ И АВТОРИЗУЕМ
+      // 1. ЕСЛИ ГОСТЬ - РЕГИСТРИРУЕМ ИЛИ АВТОРИЗУЕМ
       if (isGuest) {
         if (!data.password || data.password.length < 6) {
           setAuthError('Password must be at least 6 characters');
@@ -147,21 +147,36 @@ const StepOne = forwardRef(function StepOne({
         });
 
         if (!regRes.ok) {
+          if (regRes.status === 409) {
+            // SMART LOGIN: User already exists! Let's try to sign them in with the typed password.
+            const signRes = await signIn("credentials", {
+              redirect: false,
+              email: data.email,
+              password: data.password
+            });
+
+            if (signRes?.error) {
+              throw new Error('This email is already registered. Please provide the correct password to log in and continue.');
+            }
+            // If sign in is successful, the session cookie is set, we can proceed!
+          } else {
+            const regData = await regRes.json();
+            throw new Error(regData.error || 'Registration failed');
+          }
+        } else {
+          // New user registered successfully, now sign in
           const regData = await regRes.json();
-          throw new Error(regData.error || 'Registration failed');
-        }
+          currentUserId = regData.userId;
 
-        const regData = await regRes.json();
-        currentUserId = regData.userId;
+          const signRes = await signIn("credentials", {
+            redirect: false,
+            email: data.email,
+            password: data.password
+          });
 
-        const signRes = await signIn("credentials", {
-          redirect: false,
-          email: data.email,
-          password: data.password
-        });
-
-        if (signRes?.error) {
-          throw new Error('Account created, but auto-login failed. Please log in manually.');
+          if (signRes?.error) {
+            throw new Error('Account created, but auto-login failed. Please log in manually.');
+          }
         }
       } else {
         // ЕСЛИ УЖЕ АВТОРИЗОВАН - ПРОСТО ОБНОВЛЯЕМ ПРОФИЛЬ
@@ -196,7 +211,9 @@ const StepOne = forwardRef(function StepOne({
           body: JSON.stringify(draftPayload)
         });
         
-        if (!draftRes.ok) throw new Error('Failed to save application draft');
+        if (!draftRes.ok) {
+          console.warn('Failed to save application draft');
+        }
       }
       
       onNext(data);
