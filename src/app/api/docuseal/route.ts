@@ -19,7 +19,6 @@ export async function POST(req: Request) {
     const body = await req.json();
     let { applicationId, email, firstName, lastName } = body;
 
-    // SMART RECOVERY: If frontend lost the ID, find the latest application for this user
     if (!applicationId) {
       const latestApp = await prisma.applications.findFirst({
         where: { user_id: authUserId },
@@ -66,20 +65,28 @@ export async function POST(req: Request) {
     }
 
     const data = await docusealResponse.json();
-    const submitter = data[0].submitters[0];
+    
+    // SAFE PARSING: Handle both array and object responses from DocuSeal
+    const submission = Array.isArray(data) ? data[0] : data;
+    
+    if (!submission || !submission.submitters || submission.submitters.length === 0) {
+      console.error("Unexpected DocuSeal response format:", data);
+      return NextResponse.json({ error: "Invalid response format from DocuSeal" }, { status: 500 });
+    }
 
-    // Save the submission ID to our database
+    const submitter = submission.submitters[0];
+
     await prisma.applications.update({
       where: { id: applicationId },
       data: {
-        docusealSubmissionId: data[0].id.toString(),
+        docusealSubmissionId: submission.id.toString(),
         contractStatus: "SENT",
       },
     });
 
     return NextResponse.json({
       docuseal_url: submitter.embed_url,
-      submission_id: data[0].id,
+      submission_id: submission.id,
     });
   } catch (error) {
     console.error("Error generating DocuSeal URL:", error);
