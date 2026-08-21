@@ -66,8 +66,16 @@ export default function WizardClient({ initialStep }: WizardClientProps) {
   }, [step]);
 
   useEffect(() => {
+    // Prevent routing race conditions while NextAuth is hydrating the session
+    if (status === "loading") return;
+
+    // 1. If a guest tries to access steps > 1, send them back to registration (Step 1)
     if (status === "unauthenticated" && step > 0) {
       router.replace(`/wizard/step-1${buildQueryString()}`);
+    } 
+    // 2. If an authenticated user lands on Step 1, immediately skip to Step 2
+    else if (status === "authenticated" && step === 0) {
+      router.replace(`/wizard/step-2${buildQueryString()}`);
     }
   }, [status, step, router, campaignId, partnerSlug]);
 
@@ -135,14 +143,12 @@ export default function WizardClient({ initialStep }: WizardClientProps) {
 
       const responseData = await res.json();
       
-      // GUARANTEED TRANSITION TO STEP 4
       if (responseData.id || responseData.applicationId) {
         const generatedAppId = responseData.id || responseData.applicationId;
         setApplicationId(generatedAppId);
         setStep(3); 
         router.push(`/wizard/step-4${buildQueryString()}`);
       } else {
-        // Fallback safely just in case backend didn't return ID
         setStep(3);
         router.push(`/wizard/step-4${buildQueryString()}`);
       }
@@ -156,6 +162,7 @@ export default function WizardClient({ initialStep }: WizardClientProps) {
     setShowSuccess(true);
   };
 
+  // Wait until session is fully loaded to prevent flashing the wrong step
   if (status === "loading" || (!isDraftLoaded && status === "authenticated")) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
