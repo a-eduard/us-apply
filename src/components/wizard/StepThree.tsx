@@ -23,21 +23,22 @@ const StepThree = forwardRef(function StepThree({
   const { handleSubmit, formState: { errors }, setValue, watch, trigger, getValues, setError } = useForm({
     resolver: zodResolver(StepThreeSchema),
     defaultValues: {
-      pitchMethod: 'video', // Force video only
+      pitchMethod: 'video',
       mediaFile: null
     }
   });
 
+  const pitchMethod = watch('pitchMethod');
+  const mediaFile = watch('mediaFile');
+
   useImperativeHandle(ref, () => ({
     getValues: () => getValues(),
     validateAndSubmit: async () => {
-      // TEMPORARILY DISABLED: Check for mandatory media file to test Step 4
-      /*
+      // MANDATORY CHECK RESTORED
       if (!mediaFile) {
         setError('mediaFile', { type: 'manual', message: 'Please record a video pitch to submit your application.' });
         return false;
       }
-      */
       
       const isValid = await trigger();
       if (isValid) {
@@ -52,9 +53,6 @@ const StepThree = forwardRef(function StepThree({
       }
     }
   }));
-
-  const pitchMethod = watch('pitchMethod');
-  const mediaFile = watch('mediaFile');
   
   const [recorderState, setRecorderState] = useState<'idle' | 'recording' | 'review'>('idle');
   const [mediaError, setMediaError] = useState<string | null>(null);
@@ -163,7 +161,7 @@ const StepThree = forwardRef(function StepThree({
   };
   
   const retake = () => {
-    setValue('mediaFile', null);
+    setValue('mediaFile', null, { shouldValidate: true });
     setRecorderState('idle');
     setMediaError(null);
     if (videoPreviewRef.current) {
@@ -174,60 +172,55 @@ const StepThree = forwardRef(function StepThree({
   };
 
   const submitForm = async () => {
-    // TEMPORARILY DISABLED: Allow skipping video upload
-    /*
+    // MANDATORY CHECK RESTORED
     if (!mediaFile) {
       setError('mediaFile', { type: 'manual', message: 'Please record a video pitch to submit your application.' });
       return;
     }
-    */
     
     setIsUploading(true);
     try {
       let videoPitchUrl = null;
 
-      // Only run S3 upload if a media file was actually recorded
-      if (mediaFile) {
-        // 1. Get presigned URL
-        const presignRes = await fetch('/api/upload/presign', {
-          method: 'POST',
+      // 1. Get presigned URL
+      const presignRes = await fetch('/api/upload/presign', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fileName: mediaFile.name,
+          fileType: mediaFile.type,
+          isVideo: true
+        })
+      });
+      const presignData = await presignRes.json();
+      
+      if (!presignRes.ok) throw new Error(presignData.error || 'Failed to get upload URL');
+
+      // 2. Upload file to AWS S3
+      const uploadRes = await fetch(presignData.uploadUrl, {
+        method: 'PUT',
+        headers: { 'Content-Type': mediaFile.type },
+        body: mediaFile
+      });
+      
+      if (!uploadRes.ok) throw new Error('Failed to upload to S3');
+      
+      videoPitchUrl = presignData.publicUrl;
+      const userId = session?.user ? (session.user as any).id : null;
+
+      // 3. Save URL to Profile
+      if (userId) {
+        await fetch(`/api/users/${userId}/profile`, {
+          method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            fileName: mediaFile.name,
-            fileType: mediaFile.type,
-            isVideo: true
-          })
+          body: JSON.stringify({ video_pitch_url: videoPitchUrl })
         });
-        const presignData = await presignRes.json();
-        
-        if (!presignRes.ok) throw new Error(presignData.error || 'Failed to get upload URL');
-
-        // 2. Upload file to AWS S3
-        const uploadRes = await fetch(presignData.uploadUrl, {
-          method: 'PUT',
-          headers: { 'Content-Type': mediaFile.type },
-          body: mediaFile
-        });
-        
-        if (!uploadRes.ok) throw new Error('Failed to upload to S3');
-        
-        videoPitchUrl = presignData.publicUrl;
-        const userId = session?.user ? (session.user as any).id : null;
-
-        // 3. Save URL to Profile
-        if (userId) {
-          await fetch(`/api/users/${userId}/profile`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ video_pitch_url: videoPitchUrl })
-          });
-        }
       }
 
-      // Proceed to the next step (Step 4) whether video is present or not
       onNext({ pitchMethod: 'video', videoPitchUrl });
     } catch (err) {
       console.error("Upload Error:", err);
+      setError('mediaFile', { type: 'manual', message: 'Failed to upload video. Please try again.' });
       setIsUploading(false);
     } 
   };

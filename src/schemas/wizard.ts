@@ -19,9 +19,9 @@ export const ProfileEnrichmentSchema = z.object({
   email: z.string()
     .min(1, "Email is required")
     .email("Please enter a valid email address (e.g., name@example.com)"),
-  password: z.string().optional(), // Added for integrated registration
+  password: z.string().optional(),
   city: z.string().trim().min(2, "Please enter your city"),
-  state: z.string().trim().min(1, "Please specify your state or country").max(100, "Value is too long"),
+  country: z.string().trim().min(1, "Please select your country").max(100, "Value is too long"),
 });
 export const StepOneSchema = ProfileEnrichmentSchema;
 
@@ -74,7 +74,7 @@ const ACCEPTED_TYPES = [
 
 export const StepThreeSchema = z.object({
   pitchMethod: z.enum(["video", "audio"]),
-  mediaFile: z.any().optional(), // TEMPORARY: Made optional for testing Step 4
+  mediaFile: z.any().refine((file) => file !== null && file !== undefined, "Please record a video pitch to submit your application."),
 });
 
 export const generateScreeningSchema = (questions: Array<{ id: string; type: string; isRequired: boolean }>) => {

@@ -5,7 +5,7 @@ import bcrypt from "bcryptjs";
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { firstName, lastName, email, password, role, city, state } = body;
+    const { firstName, lastName, email, password, role, city, country } = body;
 
     if (!firstName || !lastName || !email || !password) {
       return NextResponse.json(
@@ -35,7 +35,7 @@ export async function POST(req: Request) {
         password_hash: hashedPassword,
         role: role || "Candidate",
         city: city || undefined,
-        state: state || undefined,
+        state: country || undefined, // Keep using 'state' column in DB to avoid migrations
       },
     });
 

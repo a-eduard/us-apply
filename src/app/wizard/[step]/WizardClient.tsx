@@ -219,27 +219,33 @@ export default function WizardClient({ initialStep }: WizardClientProps) {
           ></div>
 
           {STEPS.map((s, i) => {
-            const isCompleted = maxReachedStep > i || step > i;
+            // SMART NAVIGATION LOCK:
+            // 1. Mark Step 1 as completed if authenticated.
+            const isCompleted = maxReachedStep > i || step > i || (status === "authenticated" && i === 0);
             const isActive = step === i;
-            const isLocked = i > maxReachedStep;
+            const isFutureLocked = i > maxReachedStep;
+            
+            // 2. Prevent clicking Step 1 entirely if user is authenticated (they already have an account).
+            const isAuthLocked = status === "authenticated" && i === 0;
+            const isClickable = !isFutureLocked && !isActive && !isAuthLocked;
             
             return (
               <button
                 key={i}
                 type="button"
                 onClick={() => {
-                  if (i === step || isLocked) {
-                    if (isLocked) {
-                      setShake(true);
-                      setTimeout(() => setShake(false), 500);
-                    }
+                  if (isActive || isAuthLocked) return; // Do nothing, prevent route change glitch
+                  
+                  if (isFutureLocked) {
+                    setShake(true);
+                    setTimeout(() => setShake(false), 500);
                     return;
                   }
                   router.push(`/wizard/step-${i + 1}${buildQueryString()}`);
                 }}
                 className={cn(
                   "flex items-center gap-2.5 focus:outline-none bg-white z-10 px-2 sm:px-3", 
-                  !isLocked ? "cursor-pointer hover:opacity-80 transition-opacity" : "cursor-not-allowed"
+                  isClickable ? "cursor-pointer hover:opacity-80 transition-opacity" : (isFutureLocked ? "cursor-not-allowed" : "cursor-default")
                 )}
               >
                 <div className={cn(
@@ -256,7 +262,7 @@ export default function WizardClient({ initialStep }: WizardClientProps) {
                   isCompleted ? "text-slate-900" : "text-slate-400"
                 )}>
                   {s}
-                  {isLocked && <Lock className="w-3.5 h-3.5 text-slate-300" />}
+                  {isFutureLocked && <Lock className="w-3.5 h-3.5 text-slate-300" />}
                 </span>
               </button>
             );

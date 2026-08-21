@@ -1,14 +1,16 @@
 "use client";
 
-import React, { useState, useEffect, forwardRef, useImperativeHandle, useRef } from 'react';
+import React, { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { City } from 'country-state-city';
+import { Country } from 'country-state-city';
 import { signIn } from 'next-auth/react';
 
 import { ProfileEnrichmentSchema } from '@/schemas/wizard';
 import { cn } from '@/lib/utils';
 import { Loader2 } from 'lucide-react';
+
+const allCountries = Country.getAllCountries();
 
 const StepOne = forwardRef(function StepOne({ 
   defaultValues, 
@@ -26,7 +28,7 @@ const StepOne = forwardRef(function StepOne({
   
   const currentCampaignId = campaignId || (typeof window !== "undefined" ? sessionStorage.getItem('campaign_id') : "");
 
-  const { register: registerProfile, setValue: setProfileValue, handleSubmit: handleProfileSubmit, formState: { errors: profileErrors }, setFocus, trigger: triggerProfile, getValues: getProfileValues, watch: watchProfile } = useForm({
+  const { register: registerProfile, handleSubmit: handleProfileSubmit, formState: { errors: profileErrors }, setFocus, trigger: triggerProfile, getValues: getProfileValues, watch: watchProfile } = useForm({
     resolver: zodResolver(ProfileEnrichmentSchema),
     mode: 'onChange',
     reValidateMode: 'onBlur',
@@ -36,7 +38,7 @@ const StepOne = forwardRef(function StepOne({
       email: defaultValues.email || '',
       password: '',
       city: defaultValues.city || '',
-      state: defaultValues.state || ''
+      country: defaultValues.state || defaultValues.country || '' // Map existing state from DB to country
     }
   });
 
@@ -47,45 +49,6 @@ const StepOne = forwardRef(function StepOne({
     return () => subscription.unsubscribe();
   }, [watchProfile, onChange]);
   
-  const [locSearch, setLocSearch] = useState(() => {
-    if (defaultValues.city && defaultValues.state) {
-      return defaultValues.city + ', ' + defaultValues.state;
-    }
-    return '';
-  });
-  
-  const [locOptions, setLocOptions] = useState<any[]>([]);
-  const [showLocDropdown, setShowLocDropdown] = useState(false);
-  const skipSearchRef = useRef(false);
-  const locRef = useRef<HTMLDivElement>(null);
-  
-  useEffect(() => {
-    const handleClickOutside = (e: any) => {
-      if (locRef.current && !locRef.current.contains(e.target)) {
-        setShowLocDropdown(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  useEffect(() => {
-    if (skipSearchRef.current) { skipSearchRef.current = false; return; }
-    if (locSearch.length >= 3) {
-      const timeout = setTimeout(() => {
-        const allCities = City.getCitiesOfCountry('US') || [];
-        const lower = locSearch.toLowerCase();
-        const matches = allCities.filter(c => c.name.toLowerCase().includes(lower)).slice(0, 50);
-        setLocOptions(matches);
-        setShowLocDropdown(true);
-      }, 300);
-      return () => clearTimeout(timeout);
-    } else {
-      setLocOptions([]);
-      setShowLocDropdown(false);
-    }
-  }, [locSearch]);
-
   useImperativeHandle(ref, () => ({
     getValues: () => getProfileValues(),
     validateAndSubmit: async () => {
@@ -123,13 +86,12 @@ const StepOne = forwardRef(function StepOne({
           password: data.password,
           role: 'Candidate',
           city: data.city,
-          state: data.state
+          country: data.country
         })
       });
 
       if (!regRes.ok) {
         if (regRes.status === 409) {
-          // SMART LOGIN: User already exists! Let's try to sign them in with the typed password.
           const signRes = await signIn("credentials", {
             redirect: false,
             email: data.email,
@@ -144,7 +106,6 @@ const StepOne = forwardRef(function StepOne({
           throw new Error(regData.error || 'Registration failed');
         }
       } else {
-        // New user registered successfully, now sign in
         const signRes = await signIn("credentials", {
           redirect: false,
           email: data.email,
@@ -156,14 +117,13 @@ const StepOne = forwardRef(function StepOne({
         }
       }
 
-      // SAVE DRAFT
       if (currentCampaignId) {
         const draftPayload = {
           campaign_id: parseInt(currentCampaignId, 10),
           first_name: data.firstName,
           last_name: data.lastName,
           city: data.city,
-          state: data.state
+          state: data.country // Using state column in DB
         };
 
         const draftRes = await fetch('/api/applications/draft', {
@@ -211,12 +171,7 @@ const StepOne = forwardRef(function StepOne({
 
       <div className="mb-6 sm:mb-8">
         <div className="grid grid-cols-2 gap-3 sm:gap-4">
-          <button
-            type="button"
-            disabled
-            title="Coming soon"
-            className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2.5 sm:py-3 border border-slate-300 rounded-xl bg-slate-50 text-xs sm:text-sm font-bold text-slate-400 opacity-60 cursor-not-allowed shadow-sm"
-          >
+          <button type="button" disabled title="Coming soon" className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2.5 sm:py-3 border border-slate-300 rounded-xl bg-slate-50 text-xs sm:text-sm font-bold text-slate-400 opacity-60 cursor-not-allowed shadow-sm">
             <svg className="w-4 h-4 sm:w-5 sm:h-5 shrink-0 opacity-70" viewBox="0 0 24 24">
               <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
               <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
@@ -225,12 +180,7 @@ const StepOne = forwardRef(function StepOne({
             </svg>
             Google
           </button>
-          <button
-            type="button"
-            disabled
-            title="Coming soon"
-            className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2.5 sm:py-3 border border-slate-300 rounded-xl bg-slate-50 text-xs sm:text-sm font-bold text-slate-400 opacity-60 cursor-not-allowed shadow-sm"
-          >
+          <button type="button" disabled title="Coming soon" className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2.5 sm:py-3 border border-slate-300 rounded-xl bg-slate-50 text-xs sm:text-sm font-bold text-slate-400 opacity-60 cursor-not-allowed shadow-sm">
             <svg className="w-4 h-4 sm:w-5 sm:h-5 shrink-0 opacity-70" fill="#0077B5" viewBox="0 0 24 24">
               <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
             </svg>
@@ -293,54 +243,31 @@ const StepOne = forwardRef(function StepOne({
           {profileErrors.password && <p className="text-xs text-red-500 font-bold mt-1">{(profileErrors.password as any).message}</p>}
         </div>
         
-        <div className="space-y-1.5" ref={locRef}>
-          <label className="text-sm font-bold text-slate-700">Location (City, State/Country) <span className="text-red-500">*</span></label>
-          <div className="relative">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
+          <div className="space-y-1.5">
+            <label className="text-sm font-bold text-slate-700">Country <span className="text-red-500">*</span></label>
+            <select 
+              {...registerProfile('country')}
+              className={cn("w-full px-4 py-3 sm:py-2.5 rounded-xl border outline-none bg-slate-50 transition-colors text-base sm:text-sm", profileErrors.country ? "border-red-500 focus:ring-2 focus:ring-red-500" : "border-slate-300 focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600")}
+            >
+              <option value="">Select country...</option>
+              {allCountries.map((c) => (
+                <option key={c.isoCode} value={c.name}>{c.name}</option>
+              ))}
+            </select>
+            {profileErrors.country && <p className="text-xs text-red-500 font-bold mt-1">{(profileErrors.country as any).message}</p>}
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-sm font-bold text-slate-700">City <span className="text-red-500">*</span></label>
             <input 
               type="text" 
-              placeholder="e.g. Austin, TX or London, UK"
-              value={locSearch}
-              onChange={(e) => {
-                const val = e.target.value;
-                setLocSearch(val);
-                
-                let c = val;
-                let s = val;
-                if (val.includes(',')) {
-                  const parts = val.split(',');
-                  c = parts[0].trim();
-                  s = parts.slice(1).join(',').trim();
-                }
-                
-                setProfileValue('city', c, { shouldValidate: true });
-                setProfileValue('state', s, { shouldValidate: true });
-              }}
-              className={cn("w-full px-4 py-3 sm:py-2.5 rounded-xl border outline-none bg-slate-50 transition-colors text-base sm:text-sm", (profileErrors.city || profileErrors.state) ? "border-red-500 focus:ring-2 focus:ring-red-500" : "border-slate-300 focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600")}
+              {...registerProfile('city')}
+              placeholder="e.g. London"
+              className={cn("w-full px-4 py-3 sm:py-2.5 rounded-xl border outline-none bg-slate-50 transition-colors text-base sm:text-sm", profileErrors.city ? "border-red-500 focus:ring-2 focus:ring-red-500" : "border-slate-300 focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600")}
             />
-            {showLocDropdown && locOptions.length > 0 && (
-              <ul className="absolute z-10 w-full mt-2 bg-white border border-slate-200 rounded-xl shadow-xl max-h-48 sm:max-h-60 overflow-auto text-sm py-1">
-                {locOptions?.map((opt, i) => (
-                  <li 
-                    key={i}
-                    onClick={() => {
-                      const display = opt.name + ', ' + opt.stateCode;
-                      skipSearchRef.current = true;
-                      setLocSearch(display);
-                      setProfileValue('city', opt.name, { shouldValidate: true });
-                      setProfileValue('state', opt.stateCode, { shouldValidate: true });
-                      setShowLocDropdown(false);
-                    }}
-                    className="px-4 py-3 sm:py-2.5 hover:bg-blue-50 cursor-pointer text-slate-700 transition-colors font-medium"
-                  >
-                    {opt.name}, {opt.stateCode}
-                  </li>
-                ))}
-              </ul>
-            )}
+            {profileErrors.city && <p className="text-xs text-red-500 font-bold mt-1">{(profileErrors.city as any).message}</p>}
           </div>
-          {(profileErrors.city || profileErrors.state) && <p className="text-xs text-red-500 font-bold mt-1">Please specify your location</p>}
-          <input type="hidden" {...registerProfile('city')} />
-          <input type="hidden" {...registerProfile('state')} />
         </div>
 
         <div className="pt-4 sm:pt-6">
