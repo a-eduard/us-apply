@@ -42,6 +42,7 @@ export default function EmployerCandidateCard({ candidate, fetchCandidates }: an
   const [expanded, setExpanded] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [showVideo, setShowVideo] = useState(false);
+  const [showResume, setShowResume] = useState(false);
   
   const normalizeStatus = (status: string) => {
     if (!status || status === "Applied") return "New";
@@ -91,17 +92,24 @@ export default function EmployerCandidateCard({ candidate, fetchCandidates }: an
     }
   };
 
-  const candidateFullName = `${candidate.firstName || ""} ${candidate.lastName || ""}`.trim() || "Unknown Candidate";
-  const initials = candidateFullName.substring(0, 2).toUpperCase();
-
-  const experience = candidate.years_of_experience || candidate.yearsOfExperience;
-  const niche = candidate.niche || candidate.niches;
-  const linkedin = candidate.linkedinUrl || candidate.linkedin_url;
-  const resume = candidate.resumeUrl || candidate.resume_url;
-  const video = candidate.videoPitchUrl || candidate.video_pitch_url;
+  // Extract user data reliably from nested relation or direct properties
+  const userData = candidate.user || candidate.users || candidate;
+  const firstName = userData.firstName || userData.first_name || "";
+  const lastName = userData.lastName || userData.last_name || "";
+  const email = userData.email || candidate.email || "No Email";
   
-  const phone = candidate.phone || candidate.phone_number;
-  const location = candidate.city || candidate.location || candidate.city_state;
+  const candidateFullName = `${firstName} ${lastName}`.trim() || "Unknown Candidate";
+  const initials = candidateFullName.substring(0, 2).toUpperCase();
+  const avatarUrl = userData.avatar_url || userData.avatarUrl;
+
+  const experience = candidate.years_of_experience || candidate.yearsOfExperience || userData.years_of_experience;
+  const niche = candidate.niche || candidate.niches || userData.niches;
+  const linkedin = candidate.linkedinUrl || candidate.linkedin_url || userData.linkedin_url;
+  const resume = candidate.resumeUrl || candidate.resume_url || userData.resume_url;
+  const video = candidate.videoPitchUrl || candidate.video_pitch_url || userData.video_pitch_url;
+  
+  const phone = candidate.phone || candidate.phone_number || userData.phone;
+  const location = candidate.city || candidate.location || candidate.city_state || userData.city;
   
   let screeningData: any = null;
   if (candidate.screening_data || candidate.screeningData) {
@@ -130,12 +138,16 @@ export default function EmployerCandidateCard({ candidate, fetchCandidates }: an
           onClick={() => setExpanded(!expanded)}
         >
           <div className="flex items-center gap-3 sm:gap-5 w-full sm:w-auto overflow-hidden">
-            <div className={cn("w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center font-bold text-base sm:text-lg shrink-0 shadow-sm border", config.badge)}>
-              {initials}
-            </div>
+            {avatarUrl ? (
+              <img src={avatarUrl} alt="Avatar" className={cn("w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover shrink-0 shadow-sm border", config.border)} />
+            ) : (
+              <div className={cn("w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center font-bold text-base sm:text-lg shrink-0 shadow-sm border", config.badge)}>
+                {initials}
+              </div>
+            )}
             <div className="flex-1 min-w-0">
               <div className="font-extrabold text-slate-900 dark:text-white mb-0.5 leading-tight truncate transition-colors">{candidateFullName}</div>
-              <div className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 truncate transition-colors">{candidate.email}</div>
+              <div className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 truncate transition-colors">{email}</div>
             </div>
             
             <div className="hidden md:flex items-center gap-4 border-l border-slate-200 dark:border-slate-800 pl-4 ml-2 shrink-0 transition-colors">
@@ -206,7 +218,7 @@ export default function EmployerCandidateCard({ candidate, fetchCandidates }: an
                         <div className="flex items-center gap-2 text-[10px] sm:text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1.5 sm:mb-2 transition-colors">
                           <Globe className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" /> LinkedIn
                         </div>
-                        <a href={linkedin} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 w-fit transition-colors">
+                        <a href={linkedin} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 w-fit transition-colors outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded-md">
                           <LinkIcon className="w-3 h-3 sm:w-3.5 sm:h-3.5" /> Open Profile
                         </a>
                       </div>
@@ -217,9 +229,12 @@ export default function EmployerCandidateCard({ candidate, fetchCandidates }: an
                         <div className="flex items-center gap-2 text-[10px] sm:text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1.5 sm:mb-2 transition-colors">
                           <FileText className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" /> Resume / CV
                         </div>
-                        <a href={resume} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white w-fit transition-colors">
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); setShowResume(true); }}
+                          className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white w-fit transition-colors outline-none focus-visible:ring-2 focus-visible:ring-slate-500 rounded-md"
+                        >
                           <FileText className="w-3 h-3 sm:w-3.5 sm:h-3.5" /> View Document
-                        </a>
+                        </button>
                       </div>
                     )}
 
@@ -230,7 +245,7 @@ export default function EmployerCandidateCard({ candidate, fetchCandidates }: an
                         </div>
                         <button 
                           onClick={(e) => { e.stopPropagation(); setShowVideo(true); }}
-                          className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-rose-600 dark:text-rose-400 hover:text-rose-700 dark:hover:text-rose-300 w-fit transition-colors"
+                          className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-rose-600 dark:text-rose-400 hover:text-rose-700 dark:hover:text-rose-300 w-fit transition-colors outline-none focus-visible:ring-2 focus-visible:ring-rose-500 rounded-md"
                         >
                           <PlayCircle className="w-3 h-3 sm:w-3.5 sm:h-3.5" /> Watch Video
                         </button>
@@ -268,7 +283,7 @@ export default function EmployerCandidateCard({ candidate, fetchCandidates }: an
                           key={status}
                           onClick={() => handleStatusChange(status)}
                           className={cn(
-                            "w-full text-left px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all border",
+                            "w-full text-left px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all border outline-none focus-visible:ring-2 focus-visible:ring-blue-500",
                             localStatus === status 
                               ? STATUS_CONFIG[status].badge
                               : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 hover:border-slate-300 dark:hover:border-slate-600"
@@ -293,7 +308,7 @@ export default function EmployerCandidateCard({ candidate, fetchCandidates }: an
                     <button
                       onClick={handleSaveNotes}
                       disabled={isSaving}
-                      className="mt-3 w-full bg-slate-900 dark:bg-blue-600 hover:bg-slate-800 dark:hover:bg-blue-700 text-white text-xs sm:text-sm font-bold py-2.5 sm:py-3 rounded-xl transition-all disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-sm"
+                      className="mt-3 w-full bg-slate-900 dark:bg-blue-600 hover:bg-slate-800 dark:hover:bg-blue-700 text-white text-xs sm:text-sm font-bold py-2.5 sm:py-3 rounded-xl transition-all disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-sm outline-none focus-visible:ring-4 focus-visible:ring-slate-500/20 dark:focus-visible:ring-blue-500/40 active:scale-[0.98]"
                     >
                       {isSaving ? "Saving..." : <><Check className="w-3.5 h-3.5 sm:w-4 sm:h-4"/> Save Note</>}
                     </button>
@@ -318,16 +333,16 @@ export default function EmployerCandidateCard({ candidate, fetchCandidates }: an
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 10 }}
               transition={{ duration: 0.2 }}
-              className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-4xl overflow-hidden shadow-2xl flex flex-col border border-slate-200 dark:border-slate-800 transition-colors"
+              className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl rounded-3xl w-full max-w-4xl overflow-hidden shadow-2xl flex flex-col border border-slate-200/60 dark:border-slate-800/60 transition-colors"
               onClick={(e) => e.stopPropagation()} 
             >
-              <div className="p-4 sm:p-5 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-950 transition-colors">
+              <div className="p-4 sm:p-5 border-b border-slate-200/50 dark:border-slate-800/50 flex justify-between items-center transition-colors">
                 <h3 className="font-bold text-base sm:text-lg text-slate-900 dark:text-white flex items-center gap-2 transition-colors">
                   <PlayCircle className="w-5 h-5 text-rose-500 dark:text-rose-400" /> Video Pitch: {candidateFullName}
                 </h3>
                 <button 
                   onClick={() => setShowVideo(false)} 
-                  className="p-2 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-full transition-colors"
+                  className="p-1.5 sm:p-2 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 rounded-full transition-colors active:scale-95"
                 >
                   <X className="w-5 h-5 text-slate-500 dark:text-slate-400" />
                 </button>
@@ -342,6 +357,44 @@ export default function EmployerCandidateCard({ candidate, fetchCandidates }: an
                 >
                   Your browser does not support the video tag.
                 </video>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* --- РЕЗЮМЕ МОДАЛКА --- */}
+      <AnimatePresence>
+        {showResume && resume && (
+          <div 
+            className="fixed inset-0 z-[9999] bg-slate-900/80 dark:bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 transition-colors"
+            onClick={() => setShowResume(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              transition={{ duration: 0.2 }}
+              className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl rounded-3xl w-full max-w-4xl h-[80vh] flex flex-col overflow-hidden shadow-2xl border border-slate-200/60 dark:border-slate-800/60 transition-colors"
+              onClick={(e) => e.stopPropagation()} 
+            >
+              <div className="p-4 sm:p-5 border-b border-slate-200/50 dark:border-slate-800/50 flex justify-between items-center transition-colors shrink-0">
+                <h3 className="font-bold text-base sm:text-lg text-slate-900 dark:text-white flex items-center gap-2 transition-colors">
+                  <FileText className="w-5 h-5 text-emerald-500 dark:text-emerald-400" /> Resume: {candidateFullName}
+                </h3>
+                <button 
+                  onClick={() => setShowResume(false)} 
+                  className="p-1.5 sm:p-2 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 rounded-full transition-colors active:scale-95"
+                >
+                  <X className="w-5 h-5 text-slate-500 dark:text-slate-400" />
+                </button>
+              </div>
+              <div className="flex-1 w-full bg-slate-100 dark:bg-slate-950/50 relative">
+                <iframe
+                  src={resume}
+                  className="w-full h-full border-0"
+                  title="Resume Viewer"
+                />
               </div>
             </motion.div>
           </div>

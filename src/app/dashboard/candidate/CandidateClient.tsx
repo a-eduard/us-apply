@@ -21,8 +21,10 @@ import {
   ArrowUpRight,
   Sun,
   Moon,
-  Search
+  Search,
+  X
 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import ProfileSettingsForm from "@/components/dashboard/ProfileSettingsForm";
 
@@ -45,6 +47,10 @@ export default function CandidateClient() {
 
   // Tabs for the main content area
   const [activeTab, setActiveTab] = useState<"active" | "explore" | "settings">("active");
+
+  // Modal States
+  const [showVideoModal, setShowVideoModal] = useState(false);
+  const [showResumeModal, setShowResumeModal] = useState(false);
 
   const isFirstLoad = useRef(true);
   const userId = (session?.user as any)?.id;
@@ -228,22 +234,28 @@ export default function CandidateClient() {
                   </a>
                 )}
                 {userProfile?.resume_url && (
-                  <a href={userProfile.resume_url} target="_blank" rel="noreferrer" className="flex items-center justify-between p-2.5 sm:p-3 rounded-xl border border-slate-100 dark:border-slate-800 hover:border-emerald-200 dark:hover:border-emerald-500/30 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 transition-colors group active:scale-[0.98]">
+                  <button 
+                    onClick={() => setShowResumeModal(true)}
+                    className="w-full flex items-center justify-between p-2.5 sm:p-3 rounded-xl border border-slate-100 dark:border-slate-800 hover:border-emerald-200 dark:hover:border-emerald-500/30 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 transition-colors group active:scale-[0.98] outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+                  >
                     <div className="flex items-center gap-3">
                       <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-emerald-100 dark:bg-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400 transition-colors shrink-0"><FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4" /></div>
                       <span className="text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 group-hover:text-emerald-700 dark:group-hover:text-emerald-400 transition-colors">Resume</span>
                     </div>
                     <ChevronRight className="w-4 h-4 text-slate-300 dark:text-slate-600 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors" />
-                  </a>
+                  </button>
                 )}
                 {userProfile?.video_pitch_url && (
-                  <a href={userProfile.video_pitch_url} target="_blank" rel="noreferrer" className="flex items-center justify-between p-2.5 sm:p-3 rounded-xl border border-slate-100 dark:border-slate-800 hover:border-purple-200 dark:hover:border-purple-500/30 hover:bg-purple-50 dark:hover:bg-purple-500/10 transition-colors group active:scale-[0.98]">
+                  <button 
+                    onClick={() => setShowVideoModal(true)}
+                    className="w-full flex items-center justify-between p-2.5 sm:p-3 rounded-xl border border-slate-100 dark:border-slate-800 hover:border-purple-200 dark:hover:border-purple-500/30 hover:bg-purple-50 dark:hover:bg-purple-500/10 transition-colors group active:scale-[0.98] outline-none focus-visible:ring-2 focus-visible:ring-purple-500"
+                  >
                     <div className="flex items-center gap-3">
                       <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-purple-100 dark:bg-purple-500/20 flex items-center justify-center text-purple-600 dark:text-purple-400 transition-colors shrink-0"><Video className="w-3.5 h-3.5 sm:w-4 sm:h-4" /></div>
                       <span className="text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 group-hover:text-purple-700 dark:group-hover:text-purple-400 transition-colors">Pitch</span>
                     </div>
                     <ChevronRight className="w-4 h-4 text-slate-300 dark:text-slate-600 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors" />
-                  </a>
+                  </button>
                 )}
               </div>
             </div>
@@ -474,6 +486,86 @@ export default function CandidateClient() {
         <span className="hidden sm:inline">Log Out</span>
         <span className="sm:hidden">Exit</span>
       </button>
+
+      {/* --- VIDEO PITCH VIEW MODAL --- */}
+      <AnimatePresence>
+        {showVideoModal && userProfile?.video_pitch_url && (
+          <div 
+            className="fixed inset-0 z-[9999] bg-slate-900/80 dark:bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 transition-colors"
+            onClick={() => setShowVideoModal(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              transition={{ duration: 0.2 }}
+              className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl rounded-3xl w-full max-w-4xl overflow-hidden shadow-2xl border border-slate-200/60 dark:border-slate-800/60 flex flex-col transition-colors"
+              onClick={(e) => e.stopPropagation()} 
+            >
+              <div className="p-4 sm:p-5 border-b border-slate-200/50 dark:border-slate-800/50 flex justify-between items-center transition-colors">
+                <h3 className="font-bold text-base sm:text-lg text-slate-900 dark:text-white flex items-center gap-2 transition-colors">
+                  <Video className="w-5 h-5 text-purple-500 dark:text-purple-400" /> Your Video Pitch
+                </h3>
+                <button 
+                  onClick={() => setShowVideoModal(false)} 
+                  className="p-1.5 sm:p-2 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 rounded-full transition-colors active:scale-95"
+                >
+                  <X className="w-5 h-5 text-slate-500 dark:text-slate-400" />
+                </button>
+              </div>
+              <div className="bg-black w-full aspect-video flex items-center justify-center relative">
+                <video
+                  src={userProfile.video_pitch_url}
+                  controls
+                  autoPlay
+                  playsInline
+                  className="w-full h-full object-contain"
+                >
+                  Your browser does not support the video tag.
+                </video>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* --- RESUME VIEW MODAL --- */}
+      <AnimatePresence>
+        {showResumeModal && userProfile?.resume_url && (
+          <div 
+            className="fixed inset-0 z-[9999] bg-slate-900/80 dark:bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 transition-colors"
+            onClick={() => setShowResumeModal(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              transition={{ duration: 0.2 }}
+              className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl rounded-3xl w-full max-w-4xl h-[80vh] flex flex-col overflow-hidden shadow-2xl border border-slate-200/60 dark:border-slate-800/60 transition-colors"
+              onClick={(e) => e.stopPropagation()} 
+            >
+              <div className="p-4 sm:p-5 border-b border-slate-200/50 dark:border-slate-800/50 flex justify-between items-center transition-colors shrink-0">
+                <h3 className="font-bold text-base sm:text-lg text-slate-900 dark:text-white flex items-center gap-2 transition-colors">
+                  <FileText className="w-5 h-5 text-emerald-500 dark:text-emerald-400" /> Your Resume
+                </h3>
+                <button 
+                  onClick={() => setShowResumeModal(false)} 
+                  className="p-1.5 sm:p-2 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 rounded-full transition-colors active:scale-95"
+                >
+                  <X className="w-5 h-5 text-slate-500 dark:text-slate-400" />
+                </button>
+              </div>
+              <div className="flex-1 w-full bg-slate-100 dark:bg-slate-950/50 relative">
+                <iframe
+                  src={userProfile.resume_url}
+                  className="w-full h-full border-0"
+                  title="Resume Viewer"
+                />
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
     </div>
   );

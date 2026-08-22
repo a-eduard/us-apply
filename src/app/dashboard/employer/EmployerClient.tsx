@@ -4,7 +4,8 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import { useTheme } from "next-themes";
-import { Building2, Plus, Briefcase, ChevronRight, LogOut, Loader2, Edit2, Trash2, CalendarDays, Users, MapPin, Mail, Phone, Globe, FileText, PlayCircle, Sun, Moon } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Building2, Plus, Briefcase, ChevronRight, LogOut, Loader2, Edit2, Trash2, CalendarDays, Users, MapPin, Mail, Phone, Globe, FileText, PlayCircle, Sun, Moon, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export default function EmployerClient() {
@@ -26,13 +27,17 @@ export default function EmployerClient() {
   const [candidates, setCandidates] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   
-  // States for deleting campaign
   const [campaignToDelete, setCampaignToDelete] = useState<number | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // States for deleting candidate
   const [candidateToDelete, setCandidateToDelete] = useState<number | null>(null);
   const [isDeletingCandidate, setIsDeletingCandidate] = useState(false);
+
+  // Modal States for Talent Pool
+  const [showVideoModal, setShowVideoModal] = useState(false);
+  const [showResumeModal, setShowResumeModal] = useState(false);
+  const [currentMediaUrl, setCurrentMediaUrl] = useState("");
+  const [currentCandidateName, setCurrentCandidateName] = useState("");
 
   const fetchData = () => {
     setLoading(true);
@@ -101,6 +106,18 @@ export default function EmployerClient() {
     }
   };
 
+  const openVideoModal = (url: string, name: string) => {
+    setCurrentMediaUrl(url);
+    setCurrentCandidateName(name);
+    setShowVideoModal(true);
+  };
+
+  const openResumeModal = (url: string, name: string) => {
+    setCurrentMediaUrl(url);
+    setCurrentCandidateName(name);
+    setShowResumeModal(true);
+  };
+
   if (loading || status === "loading") {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
@@ -113,7 +130,6 @@ export default function EmployerClient() {
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col font-sans text-slate-900 dark:text-slate-100 relative transition-colors duration-300 pb-28">
       <style>{`header { display: none !important; }`}</style>
       
-      {/* Premium Header */}
       <nav className="sticky top-0 z-40 w-full bg-white/80 dark:bg-slate-950/80 backdrop-blur-md border-b border-slate-200/60 dark:border-slate-800/60 transition-colors duration-300">
         <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between">
           <div className="flex items-center gap-2 cursor-pointer group outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded-lg p-0.5" onClick={() => router.push('/')}>
@@ -139,7 +155,6 @@ export default function EmployerClient() {
 
       <main className="flex-1 w-full max-w-[1400px] mx-auto p-4 sm:p-6 lg:p-8 mt-2 sm:mt-4">
         
-        {/* Header & Create Button */}
         <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-5">
           <div>
             <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-slate-900 dark:text-white mb-1.5 sm:mb-2 transition-colors">Employer Dashboard</h1>
@@ -154,7 +169,6 @@ export default function EmployerClient() {
           </button>
         </div>
 
-        {/* Swipeable Pill Tabs */}
         <div className="flex items-center gap-2 p-1.5 bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800 rounded-2xl w-full sm:w-fit shadow-sm transition-colors overflow-x-auto flex-nowrap [&::-webkit-scrollbar]:hidden mb-6 sm:mb-8">
           <button
             onClick={() => setActiveTab("campaigns")}
@@ -180,7 +194,6 @@ export default function EmployerClient() {
           </button>
         </div>
 
-        {/* Campaigns Tab Content */}
         {activeTab === "campaigns" && (
           <>
             {campaigns.length === 0 ? (
@@ -310,7 +323,6 @@ export default function EmployerClient() {
                 return (
                   <div key={candidate.id} className="bg-white dark:bg-slate-900 rounded-[1.5rem] sm:rounded-[2rem] border border-slate-200/60 dark:border-slate-800 p-4 sm:p-6 flex flex-col shadow-sm hover:shadow-md dark:hover:shadow-[0_10px_30px_rgba(0,0,0,0.4)] transition-all relative">
                     
-                    {/* Header with Delete Button */}
                     <div className="flex items-start justify-between gap-3 sm:gap-4 mb-4 sm:mb-5">
                       <div className="flex items-start gap-3 sm:gap-4 flex-1 min-w-0">
                         {candidate.avatar_url ? (
@@ -381,10 +393,13 @@ export default function EmployerClient() {
                       )}
 
                       {candidate.resume_url ? (
-                        <a href={candidate.resume_url} target="_blank" rel="noreferrer" className="flex flex-col items-center justify-center gap-1 sm:gap-1.5 p-1.5 sm:p-2 rounded-xl hover:bg-emerald-50 dark:hover:bg-emerald-500/10 text-slate-500 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors active:scale-95">
+                        <button 
+                          onClick={() => openResumeModal(candidate.resume_url, fullName)}
+                          className="flex flex-col items-center justify-center gap-1 sm:gap-1.5 p-1.5 sm:p-2 rounded-xl hover:bg-emerald-50 dark:hover:bg-emerald-500/10 text-slate-500 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+                        >
                           <FileText className="w-4 h-4 sm:w-5 sm:h-5" />
                           <span className="text-[9px] sm:text-[10px] font-bold">Resume</span>
-                        </a>
+                        </button>
                       ) : (
                         <div className="flex flex-col items-center justify-center gap-1 sm:gap-1.5 p-1.5 sm:p-2 rounded-xl opacity-40 cursor-not-allowed text-slate-500 dark:text-slate-400">
                           <FileText className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -393,10 +408,13 @@ export default function EmployerClient() {
                       )}
 
                       {candidate.video_pitch_url ? (
-                        <a href={candidate.video_pitch_url} target="_blank" rel="noreferrer" className="flex flex-col items-center justify-center gap-1 sm:gap-1.5 p-1.5 sm:p-2 rounded-xl hover:bg-purple-50 dark:hover:bg-purple-500/10 text-slate-500 dark:text-slate-400 hover:text-purple-600 dark:hover:text-purple-400 transition-colors active:scale-95">
+                        <button 
+                          onClick={() => openVideoModal(candidate.video_pitch_url, fullName)}
+                          className="flex flex-col items-center justify-center gap-1 sm:gap-1.5 p-1.5 sm:p-2 rounded-xl hover:bg-purple-50 dark:hover:bg-purple-500/10 text-slate-500 dark:text-slate-400 hover:text-purple-600 dark:hover:text-purple-400 transition-colors active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-purple-500"
+                        >
                           <PlayCircle className="w-4 h-4 sm:w-5 sm:h-5" />
                           <span className="text-[9px] sm:text-[10px] font-bold">Video</span>
-                        </a>
+                        </button>
                       ) : (
                         <div className="flex flex-col items-center justify-center gap-1 sm:gap-1.5 p-1.5 sm:p-2 rounded-xl opacity-40 cursor-not-allowed text-slate-500 dark:text-slate-400">
                           <PlayCircle className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -412,7 +430,6 @@ export default function EmployerClient() {
         )}
       </main>
 
-      {/* Floating Log Out Button - Optimized for mobile placement */}
       <button 
         onClick={() => signOut({ callbackUrl: '/' })} 
         className="fixed bottom-6 right-4 sm:right-6 lg:bottom-10 lg:right-10 bg-white/90 dark:bg-slate-800/90 backdrop-blur-md border border-slate-200 dark:border-slate-700 shadow-xl text-rose-500 dark:text-rose-400 px-4 sm:px-5 py-2.5 sm:py-3 rounded-full flex items-center gap-2 sm:gap-2.5 font-bold text-xs sm:text-sm hover:bg-rose-50 dark:hover:bg-rose-500/20 hover:shadow-2xl transition-all z-50 group outline-none focus-visible:ring-4 focus-visible:ring-rose-500/40 active:scale-95"
@@ -483,6 +500,87 @@ export default function EmployerClient() {
           </div>
         </div>
       )}
+
+      {/* --- VIDEO PITCH VIEW MODAL --- */}
+      <AnimatePresence>
+        {showVideoModal && currentMediaUrl && (
+          <div 
+            className="fixed inset-0 z-[9999] bg-slate-900/80 dark:bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6 transition-colors duration-300"
+            onClick={() => setShowVideoModal(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              transition={{ duration: 0.2 }}
+              className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl rounded-3xl w-full max-w-4xl overflow-hidden shadow-2xl flex flex-col border border-slate-200/60 dark:border-slate-800/60 transition-colors"
+              onClick={(e) => e.stopPropagation()} 
+            >
+              <div className="p-4 sm:p-5 border-b border-slate-200/50 dark:border-slate-800/50 flex justify-between items-center transition-colors">
+                <h3 className="font-bold text-base sm:text-lg text-slate-900 dark:text-white flex items-center gap-2 transition-colors truncate pr-4">
+                  <PlayCircle className="w-5 h-5 text-purple-500 dark:text-purple-400 shrink-0" /> Video Pitch: {currentCandidateName}
+                </h3>
+                <button 
+                  onClick={() => setShowVideoModal(false)} 
+                  className="p-1.5 sm:p-2 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 rounded-full transition-colors active:scale-95 shrink-0"
+                >
+                  <X className="w-5 h-5 text-slate-500 dark:text-slate-400" />
+                </button>
+              </div>
+              <div className="bg-black w-full aspect-video flex items-center justify-center relative">
+                <video
+                  src={currentMediaUrl}
+                  controls
+                  autoPlay
+                  playsInline
+                  className="w-full h-full object-contain"
+                >
+                  Your browser does not support the video tag.
+                </video>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* --- RESUME VIEW MODAL --- */}
+      <AnimatePresence>
+        {showResumeModal && currentMediaUrl && (
+          <div 
+            className="fixed inset-0 z-[9999] bg-slate-900/80 dark:bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 transition-colors"
+            onClick={() => setShowResumeModal(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              transition={{ duration: 0.2 }}
+              className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl rounded-3xl w-full max-w-4xl h-[80vh] flex flex-col overflow-hidden shadow-2xl border border-slate-200/60 dark:border-slate-800/60 transition-colors"
+              onClick={(e) => e.stopPropagation()} 
+            >
+              <div className="p-4 sm:p-5 border-b border-slate-200/50 dark:border-slate-800/50 flex justify-between items-center transition-colors shrink-0">
+                <h3 className="font-bold text-base sm:text-lg text-slate-900 dark:text-white flex items-center gap-2 transition-colors truncate pr-4">
+                  <FileText className="w-5 h-5 text-emerald-500 dark:text-emerald-400 shrink-0" /> Resume: {currentCandidateName}
+                </h3>
+                <button 
+                  onClick={() => setShowResumeModal(false)} 
+                  className="p-1.5 sm:p-2 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 rounded-full transition-colors active:scale-95 shrink-0"
+                >
+                  <X className="w-5 h-5 text-slate-500 dark:text-slate-400" />
+                </button>
+              </div>
+              <div className="flex-1 w-full bg-slate-100 dark:bg-slate-950/50 relative">
+                <iframe
+                  src={currentMediaUrl}
+                  className="w-full h-full border-0"
+                  title="Resume Viewer"
+                />
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
     </div>
   );
 }

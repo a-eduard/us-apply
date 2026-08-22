@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
-import { deleteS3FileByUrl } from "@/lib/s3"; // ADDED: S3 delete helper
+import { deleteS3FileByUrl } from "@/lib/s3";
 
 export async function GET(
   req: Request,
@@ -59,6 +59,7 @@ export async function GET(
             linkedinUrl: app.users?.linkedin_url || "",
             resumeUrl: app.users?.resume_url || "",
             videoPitchUrl: app.users?.video_pitch_url || "",
+            avatarUrl: app.users?.avatar_url || "", // Added missing avatar URL
             yearsOfExperience: app.users?.years_of_experience || "",
             niche: parsedNiche,
             users: undefined 
@@ -93,18 +94,15 @@ export async function DELETE(
     const campaignId = parseInt(resolvedParams.campaignId, 10);
     if (isNaN(campaignId)) return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
 
-    // 1. Fetch the campaign to get the logo_url before deleting it from DB
     const campaign = await prisma.campaigns.findUnique({
       where: { id: campaignId },
       select: { logo_url: true }
     });
 
-    // 2. Delete the logo from S3 if it exists
     if (campaign?.logo_url) {
       await deleteS3FileByUrl(campaign.logo_url);
     }
 
-    // 3. Proceed with cascaded deletion of related records in MySQL
     const apps = await prisma.applications.findMany({ 
       where: { campaign_id: campaignId }, 
       select: { id: true } 

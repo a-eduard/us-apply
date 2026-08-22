@@ -9,11 +9,21 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { City } from 'country-state-city';
+import ReactCrop, { type Crop, type PixelCrop, centerCrop, makeAspectCrop } from 'react-image-crop';
+import 'react-image-crop/dist/ReactCrop.css';
 
 const DEFAULT_NICHES = [
   "IT / SaaS", "Real Estate", "EdTech", "Finance", 
   "Healthcare", "Marketing", "Consulting", "E-commerce"
 ];
+
+function centerAspectCrop(mediaWidth: number, mediaHeight: number, aspect: number) {
+  return centerCrop(
+    makeAspectCrop({ unit: '%', width: 90 }, aspect, mediaWidth, mediaHeight),
+    mediaWidth,
+    mediaHeight
+  );
+}
 
 const safeParseNiches = (val: any): string[] => {
   if (Array.isArray(val)) return val;
@@ -51,6 +61,13 @@ export default function ProfileSettingsForm({ userProfile, userId, session, onSa
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [resumeUrl, setResumeUrl] = useState('');
+
+  // Crop Modal States
+  const [isCropModalOpen, setIsCropModalOpen] = useState(false);
+  const [imgSrc, setImgSrc] = useState('');
+  const [crop, setCrop] = useState<Crop>();
+  const [completedCrop, setCompletedCrop] = useState<PixelCrop | null>(null);
+  const imgRef = useRef<HTMLImageElement>(null);
 
   // Niches State
   const [niches, setNiches] = useState<string[]>([]);
@@ -125,12 +142,71 @@ export default function ProfileSettingsForm({ userProfile, userId, session, onSa
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
+  // Avatar Crop Logic
+  const onSelectAvatarFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      setCrop(undefined); 
+      const reader = new FileReader();
+      reader.addEventListener('load', () => {
+        setImgSrc(reader.result?.toString() || '');
+        setIsCropModalOpen(true);
+      });
+      reader.readAsDataURL(e.target.files[0]);
+      e.target.value = ''; 
+    }
+  };
+
+  const onImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
+    const { width, height } = e.currentTarget;
+    setCrop(centerAspectCrop(width, height, 1));
+  };
+
+  const generateCroppedImage = async () => {
+    if (!imgRef.current || !completedCrop) {
+      setIsCropModalOpen(false);
+      return;
+    }
+
+    const image = imgRef.current;
+    const canvas = document.createElement('canvas');
+    const scaleX = image.naturalWidth / image.width;
+    const scaleY = image.naturalHeight / image.height;
+    
+    canvas.width = completedCrop.width;
+    canvas.height = completedCrop.height;
+    const ctx = canvas.getContext('2d');
+    
+    if (!ctx) return;
+    ctx.imageSmoothingQuality = 'high';
+
+    const cropX = completedCrop.x * scaleX;
+    const cropY = completedCrop.y * scaleY;
+    const cropWidth = completedCrop.width * scaleX;
+    const cropHeight = completedCrop.height * scaleY;
+
+    ctx.drawImage(
+      image,
+      cropX,
+      cropY,
+      cropWidth,
+      cropHeight,
+      0,
+      0,
+      completedCrop.width,
+      completedCrop.height
+    );
+
+    canvas.toBlob((blob) => {
+      if (!blob) {
+        console.error('Canvas is empty');
+        setIsCropModalOpen(false);
+        return;
+      }
+      const file = new File([blob], 'avatar-cropped.jpeg', { type: 'image/jpeg' });
       setAvatarFile(file);
       setAvatarPreview(URL.createObjectURL(file));
-    }
+      setIsCropModalOpen(false);
+    }, 'image/jpeg', 0.95);
   };
 
   const toggleNiche = (niche: string) => {
@@ -365,7 +441,7 @@ export default function ProfileSettingsForm({ userProfile, userId, session, onSa
           
           <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6 mb-8">
             <div className="relative group cursor-pointer w-20 h-20 sm:w-24 sm:h-24 shrink-0 transition-all active:scale-[0.98]">
-              <input type="file" accept="image/jpeg,image/png,image/webp" onChange={handleAvatarChange} className="absolute inset-0 w-full h-full opacity-0 z-20 cursor-pointer" />
+              <input type="file" accept="image/jpeg,image/png,image/webp" onChange={onSelectAvatarFile} className="absolute inset-0 w-full h-full opacity-0 z-20 cursor-pointer" />
               {avatarPreview ? (
                 <img src={avatarPreview} alt="Avatar" className="w-full h-full rounded-full object-cover border-4 border-white dark:border-slate-800 shadow-md bg-slate-100 dark:bg-slate-950 transition-colors" />
               ) : (
@@ -670,6 +746,72 @@ export default function ProfileSettingsForm({ userProfile, userId, session, onSa
           {isSaving ? "Saving changes..." : "Save Profile"}
         </button>
       </div>
+
+      {/* --- CROP MODAL --- */}
+      <AnimatePresence>
+        {isCropModalOpen && (
+          <div className="fixed inset-0 z-[99999] bg-slate-900/80 dark:bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 transition-colors">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              transition={{ duration: 0.2 }}
+              className="bg-white dark:bg-slate-900 rounded-[2rem] w-full max-w-md overflow-hidden shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col transition-colors"
+            >
+              <div className="p-4 sm:p-5 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center transition-colors">
+                <h3 className="font-bold text-base sm:text-lg text-slate-900 dark:text-white transition-colors">Crop Profile Photo</h3>
+                <button 
+                  onClick={() => setIsCropModalOpen(false)} 
+                  className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors active:scale-95"
+                >
+                  <X className="w-5 h-5 text-slate-500 dark:text-slate-400" />
+                </button>
+              </div>
+              
+              <div className="p-4 sm:p-6 bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center max-h-[60vh] overflow-hidden transition-colors">
+                {imgSrc && (
+                  <ReactCrop
+                    crop={crop}
+                    onChange={(_, percentCrop) => setCrop(percentCrop)}
+                    onComplete={(c) => setCompletedCrop(c)}
+                    aspect={1}
+                    circularCrop
+                    className="max-h-[50vh] rounded-xl overflow-hidden shadow-sm"
+                  >
+                    <img
+                      ref={imgRef}
+                      alt="Crop me"
+                      src={imgSrc}
+                      onLoad={onImageLoad}
+                      className="max-h-[50vh] w-auto object-contain"
+                    />
+                  </ReactCrop>
+                )}
+                <p className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 mt-4 font-medium text-center">
+                  Drag the edges to select the perfect square for your avatar.
+                </p>
+              </div>
+              
+              <div className="p-4 sm:p-5 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-3 transition-colors bg-white dark:bg-slate-900">
+                <button 
+                  type="button" 
+                  onClick={() => setIsCropModalOpen(false)}
+                  className="px-4 sm:px-5 py-2 sm:py-2.5 font-bold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors text-xs sm:text-sm active:scale-95"
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="button" 
+                  onClick={generateCroppedImage}
+                  className="px-4 sm:px-5 py-2 sm:py-2.5 font-bold text-white bg-blue-600 dark:bg-blue-500 rounded-xl hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors text-xs sm:text-sm shadow-md shadow-blue-600/20 active:scale-95"
+                >
+                  Apply Photo
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* --- VIDEO PITCH VIEW MODAL --- */}
       <AnimatePresence>
