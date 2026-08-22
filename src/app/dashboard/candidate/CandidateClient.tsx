@@ -3,10 +3,9 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
+import { useTheme } from "next-themes";
 import {
-  LayoutDashboard,
   Briefcase,
-  Bell,
   Settings,
   LogOut,
   Loader2,
@@ -20,8 +19,9 @@ import {
   Building2,
   Clock,
   ArrowUpRight,
-  Menu,
-  X
+  Sun,
+  Moon,
+  Search
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import ProfileSettingsForm from "@/components/dashboard/ProfileSettingsForm";
@@ -35,17 +35,24 @@ export default function CandidateClient() {
     },
   });
 
+  const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
   const [applications, setApplications] = useState<any[]>([]);
   const [exploreCampaigns, setExploreCampaigns] = useState<any[]>([]); 
   const [userProfile, setUserProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
-  const [activeTab, setActiveTab] = useState<"dashboard" | "applications" | "settings">("dashboard");
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  // Tabs for the main content area
+  const [activeTab, setActiveTab] = useState<"active" | "explore" | "settings">("active");
 
   const isFirstLoad = useRef(true);
   const userId = (session?.user as any)?.id;
   const userRole = (session?.user as any)?.role;
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const fetchApplications = () => {
     if (!userId) return;
@@ -87,8 +94,8 @@ export default function CandidateClient() {
 
   if (loading && isFirstLoad.current) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#F7F8FA]">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
+        <Loader2 className="w-8 h-8 sm:w-10 sm:h-10 animate-spin text-blue-600 dark:text-blue-500" />
       </div>
     );
   }
@@ -125,406 +132,349 @@ export default function CandidateClient() {
     return 0;
   });
 
-  const NAV_ITEMS = [
-    { id: "dashboard", label: "My Dashboard", icon: LayoutDashboard },
-    { id: "applications", label: "Applications", icon: Briefcase },
-  ] as const;
-
-  const handleTabChange = (tabId: any) => {
-    setActiveTab(tabId);
-    setIsMobileMenuOpen(false); 
-  };
-
   return (
-    <div className="flex h-screen bg-[#F4F6F9] font-sans text-slate-900 overflow-hidden relative">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 transition-colors duration-300 relative pb-28">
       <style>{`header { display: none !important; }`}</style>
 
-      {isMobileMenuOpen && (
-        <div 
-          className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40 lg:hidden"
-          onClick={() => setIsMobileMenuOpen(false)}
-        />
-      )}
-
-      <aside className={cn(
-        "bg-white flex flex-col shadow-[4px_0_24px_rgba(0,0,0,0.02)] z-50 h-full fixed lg:relative lg:translate-x-0 w-[280px] shrink-0 transition-transform duration-300",
-        isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
-      )}>
-        <div className="h-20 lg:h-24 flex items-center justify-between px-6 lg:px-10">
-          <div className="flex items-center cursor-pointer" onClick={() => router.push('/')}>
-            <img src="/usc_logo.png" alt="USclosers Logo" className="h-8 shrink-0 mr-3" />
-            <span className="font-extrabold text-xl tracking-tight text-slate-900">USclosers</span>
+      {/* Clean Minimalist Header */}
+      <nav className="sticky top-0 z-40 w-full bg-white/80 dark:bg-slate-950/80 backdrop-blur-md border-b border-slate-200/60 dark:border-slate-800/60 transition-colors duration-300">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between">
+          
+          <div className="flex items-center cursor-pointer group outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded-lg p-0.5" onClick={() => router.push('/')}>
+            <img src="/usc_logo.png" alt="USclosers Logo" className="h-6 sm:h-7 md:h-8 shrink-0 mr-2 sm:mr-3 group-hover:opacity-80 transition-opacity" />
+            <span className="font-extrabold text-lg sm:text-xl tracking-tight text-slate-900 dark:text-white transition-colors group-hover:opacity-80 hidden sm:block">USclosers</span>
           </div>
-          <button 
-            onClick={() => setIsMobileMenuOpen(false)}
-            className="lg:hidden p-2 text-slate-400 hover:text-slate-600 rounded-lg"
-          >
-            <X className="w-6 h-6" />
-          </button>
+
+          <div className="flex items-center gap-4 sm:gap-6">
+            {mounted && (
+              <button
+                onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+                className="p-2 sm:p-2.5 rounded-full bg-slate-100 dark:bg-slate-900 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-800 border border-slate-200/50 dark:border-slate-800 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 shadow-sm active:scale-95"
+                aria-label="Toggle theme"
+              >
+                {theme === "dark" ? <Sun className="w-4 h-4 sm:w-5 sm:h-5" /> : <Moon className="w-4 h-4 sm:w-5 sm:h-5" />}
+              </button>
+            )}
+          </div>
+
+        </div>
+      </nav>
+
+      {/* Main Centered Layout Container */}
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 sm:pt-10 lg:pt-12 w-full">
+        
+        {/* Welcome Section */}
+        <div className="mb-6 sm:mb-10 text-center lg:text-left">
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight mb-2 transition-colors">
+            Welcome back, {dbFirstName || "Candidate"}
+          </h1>
+          <p className="text-sm sm:text-base font-medium text-slate-500 dark:text-slate-400 transition-colors">
+            Here is what's happening with your profile and applications today.
+          </p>
         </div>
 
-        <nav className="flex-1 px-4 lg:px-6 py-4 space-y-2 mt-2 lg:mt-4">
-          {NAV_ITEMS.map((item) => {
-            const Icon = item.icon;
-            const isActive = activeTab === item.id;
-            return (
+        {/* 2-Column Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
+          
+          {/* LEFT COLUMN: Sticky Profile Card */}
+          <div className="lg:col-span-4 lg:sticky lg:top-28 space-y-6">
+            <div className="bg-white dark:bg-slate-900 rounded-[2rem] p-5 sm:p-6 lg:p-8 shadow-sm border border-slate-200/60 dark:border-slate-800 transition-colors duration-300 flex flex-col items-center">
+              
+              <div className="w-20 h-20 sm:w-24 sm:h-24 lg:w-28 lg:h-28 rounded-full border-4 border-slate-50 dark:border-slate-950 shadow-md bg-slate-100 dark:bg-slate-800 mb-4 sm:mb-5 overflow-hidden flex items-center justify-center shrink-0 transition-colors">
+                {userProfile?.avatar_url ? (
+                  <img src={userProfile.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
+                ) : (
+                  <span className="font-bold text-xl sm:text-2xl lg:text-3xl text-slate-600 dark:text-slate-300">{userInitials}</span>
+                )}
+              </div>
+
+              <h2 className="text-lg sm:text-xl font-extrabold text-slate-900 dark:text-white tracking-tight mb-1.5 transition-colors text-center">{displayName}</h2>
+              
+              <div className="flex flex-col items-center gap-2 mb-6 text-[10px] sm:text-xs lg:text-sm text-slate-500 dark:text-slate-400 font-medium w-full transition-colors">
+                {userLocation && <div className="flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5 shrink-0" /> <span className="truncate">{userLocation}</span></div>}
+                <div className="flex items-center gap-1.5"><Mail className="w-3.5 h-3.5 shrink-0" /> <span className="truncate">{userProfile?.email || session?.user?.email}</span></div>
+                {userProfile?.phone && <div className="flex items-center gap-1.5"><Phone className="w-3.5 h-3.5 shrink-0" /> <span className="truncate">{userProfile.phone}</span></div>}
+              </div>
+
+              <div className="w-full h-px bg-slate-100 dark:bg-slate-800/60 mb-5 sm:mb-6 transition-colors"></div>
+
+              <div className="w-full text-left space-y-4 sm:space-y-5 mb-6 sm:mb-8">
+                <div>
+                  <span className="text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1.5 block transition-colors">Experience</span>
+                  <span className="text-sm font-bold text-slate-900 dark:text-slate-200 transition-colors">{userProfile?.years_of_experience || "Not specified"}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2 block transition-colors">Top Niches</span>
+                  <div className="flex flex-wrap gap-2">
+                    {userNiches.length > 0 ? userNiches.map((niche: string) => (
+                      <span key={niche} className="px-2.5 sm:px-3 py-1 sm:py-1.5 bg-slate-50 dark:bg-slate-950/50 border border-slate-200/60 dark:border-slate-800 rounded-lg text-[10px] sm:text-xs font-bold text-slate-700 dark:text-slate-300 transition-colors">
+                        {niche}
+                      </span>
+                    )) : (
+                      <span className="text-[10px] sm:text-xs font-medium text-slate-500 dark:text-slate-400">Not selected</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="w-full space-y-2.5 sm:space-y-3">
+                {userProfile?.linkedin_url && (
+                  <a href={userProfile.linkedin_url} target="_blank" rel="noreferrer" className="flex items-center justify-between p-2.5 sm:p-3 rounded-xl border border-slate-100 dark:border-slate-800 hover:border-blue-200 dark:hover:border-blue-500/30 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-colors group active:scale-[0.98]">
+                    <div className="flex items-center gap-3">
+                      <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-blue-100 dark:bg-blue-500/20 flex items-center justify-center text-blue-600 dark:text-blue-400 transition-colors shrink-0"><Globe className="w-3.5 h-3.5 sm:w-4 sm:h-4" /></div>
+                      <span className="text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 group-hover:text-blue-700 dark:group-hover:text-blue-400 transition-colors">LinkedIn</span>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-slate-300 dark:text-slate-600 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors" />
+                  </a>
+                )}
+                {userProfile?.resume_url && (
+                  <a href={userProfile.resume_url} target="_blank" rel="noreferrer" className="flex items-center justify-between p-2.5 sm:p-3 rounded-xl border border-slate-100 dark:border-slate-800 hover:border-emerald-200 dark:hover:border-emerald-500/30 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 transition-colors group active:scale-[0.98]">
+                    <div className="flex items-center gap-3">
+                      <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-emerald-100 dark:bg-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400 transition-colors shrink-0"><FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4" /></div>
+                      <span className="text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 group-hover:text-emerald-700 dark:group-hover:text-emerald-400 transition-colors">Resume</span>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-slate-300 dark:text-slate-600 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors" />
+                  </a>
+                )}
+                {userProfile?.video_pitch_url && (
+                  <a href={userProfile.video_pitch_url} target="_blank" rel="noreferrer" className="flex items-center justify-between p-2.5 sm:p-3 rounded-xl border border-slate-100 dark:border-slate-800 hover:border-purple-200 dark:hover:border-purple-500/30 hover:bg-purple-50 dark:hover:bg-purple-500/10 transition-colors group active:scale-[0.98]">
+                    <div className="flex items-center gap-3">
+                      <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-purple-100 dark:bg-purple-500/20 flex items-center justify-center text-purple-600 dark:text-purple-400 transition-colors shrink-0"><Video className="w-3.5 h-3.5 sm:w-4 sm:h-4" /></div>
+                      <span className="text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 group-hover:text-purple-700 dark:group-hover:text-purple-400 transition-colors">Pitch</span>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-slate-300 dark:text-slate-600 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors" />
+                  </a>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* RIGHT COLUMN: Content Area */}
+          <div className="lg:col-span-8 space-y-4 sm:space-y-6">
+            
+            {/* Minimalist Tabs Navigation (Swipeable on mobile) */}
+            <div className="flex items-center gap-2 p-1.5 bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800 rounded-2xl w-full sm:w-fit shadow-sm transition-colors overflow-x-auto flex-nowrap [&::-webkit-scrollbar]:hidden">
               <button
-                key={item.id}
-                onClick={() => handleTabChange(item.id)}
+                onClick={() => setActiveTab("active")}
                 className={cn(
-                  "w-full flex items-center gap-4 px-4 py-3.5 rounded-2xl font-semibold text-sm transition-all duration-300",
-                  isActive
-                    ? "bg-slate-900 text-white shadow-md shadow-slate-900/10"
-                    : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
+                  "px-4 sm:px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 whitespace-nowrap shrink-0 outline-none focus-visible:ring-2 focus-visible:ring-blue-500",
+                  activeTab === "active" 
+                    ? "bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm" 
+                    : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/50 active:scale-[0.98]"
                 )}
               >
-                <Icon className={cn("w-5 h-5", isActive ? "text-white" : "text-slate-400")} />
-                {item.label}
+                <Briefcase className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> Active 
+                {activeApps.length > 0 && (
+                  <span className="bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-400 px-2 py-0.5 rounded-full text-[10px] ml-1">{activeApps.length}</span>
+                )}
               </button>
-            );
-          })}
-        </nav>
-
-        <div className="p-4 lg:p-6 border-t border-slate-100 space-y-2">
-          <button
-            onClick={() => handleTabChange("settings")}
-            className={cn(
-              "w-full flex items-center gap-4 px-4 py-3 rounded-2xl font-semibold text-sm transition-all",
-              activeTab === "settings" ? "bg-slate-900 text-white shadow-md" : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
-            )}
-          >
-            <Settings className={cn("w-5 h-5", activeTab === "settings" ? "text-white" : "text-slate-400")} />
-            Settings
-          </button>
-          <button onClick={() => signOut({ callbackUrl: '/' })} className="w-full flex items-center gap-4 px-4 py-3 rounded-2xl font-semibold text-sm text-rose-500 hover:bg-rose-50 transition-all">
-            <LogOut className="w-5 h-5 text-rose-400" />
-            Log Out
-          </button>
-        </div>
-      </aside>
-
-      <main className="flex-1 flex flex-col h-screen overflow-hidden relative">
-
-        <div className="h-20 lg:h-24 px-4 sm:px-6 lg:px-10 flex items-center justify-between shrink-0 bg-[#F4F6F9] z-10">
-          <div className="flex items-center gap-3 lg:gap-0">
-            <button 
-              onClick={() => setIsMobileMenuOpen(true)}
-              className="lg:hidden p-2 -ml-2 text-slate-500 hover:text-slate-900 hover:bg-slate-200/50 rounded-xl transition-colors"
-            >
-              <Menu className="w-6 h-6" />
-            </button>
-
-            <div>
-              <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
-                {activeTab === 'dashboard' && 'Welcome back, ' + dbFirstName}
-                {activeTab === 'applications' && 'Job Board & Apps'}
-                {activeTab === 'settings' && 'Profile Settings'}
-              </h1>
-              <p className="hidden sm:block text-sm font-medium text-slate-500 mt-1">
-                {activeTab === 'dashboard' && "Here is what's happening with your profile today."}
-                {activeTab === 'settings' && "Manage your personal information and preferences."}
-                {activeTab === 'applications' && "Browse available roles and track your application statuses."}
-              </p>
+              <button
+                onClick={() => setActiveTab("explore")}
+                className={cn(
+                  "px-4 sm:px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 whitespace-nowrap shrink-0 outline-none focus-visible:ring-2 focus-visible:ring-blue-500",
+                  activeTab === "explore" 
+                    ? "bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm" 
+                    : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/50 active:scale-[0.98]"
+                )}
+              >
+                <Search className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> Job Board
+              </button>
+              <button
+                onClick={() => setActiveTab("settings")}
+                className={cn(
+                  "px-4 sm:px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 whitespace-nowrap shrink-0 outline-none focus-visible:ring-2 focus-visible:ring-blue-500",
+                  activeTab === "settings" 
+                    ? "bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm" 
+                    : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/50 active:scale-[0.98]"
+                )}
+              >
+                <Settings className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> Settings
+              </button>
             </div>
-          </div>
 
-          <div className="flex items-center gap-3 sm:gap-6">
-            <button className="relative p-2 text-slate-400 hover:text-slate-900 transition-colors">
-              <Bell className="w-5 h-5 sm:w-6 sm:h-6" />
-              {activeApps.length > 0 && <span className="absolute top-1.5 right-1.5 sm:top-2 sm:right-2 w-2 h-2 rounded-full bg-rose-500 border-2 border-[#F4F6F9]"></span>}
-            </button>
-
-            <div 
-              onClick={() => handleTabChange("settings")}
-              className="flex items-center gap-2 sm:gap-3 bg-white pl-1.5 pr-3 sm:px-3 py-1.5 rounded-full shadow-sm border border-slate-200/50 cursor-pointer hover:shadow-md transition-shadow"
-            >
-              {userProfile?.avatar_url ? (
-                <img src={userProfile.avatar_url} alt="Avatar" className="w-7 h-7 sm:w-9 sm:h-9 rounded-full object-cover border border-slate-200" />
-              ) : (
-                <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold text-xs sm:text-sm">
-                  {userInitials}
+            {/* TAB CONTENT: Active Applications */}
+            {activeTab === "active" && (
+              <div className="bg-white dark:bg-slate-900 rounded-[2rem] p-5 sm:p-6 lg:p-8 shadow-sm border border-slate-200/60 dark:border-slate-800 transition-colors duration-300">
+                <div className="mb-5 sm:mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+                  <div>
+                    <h3 className="font-extrabold text-lg sm:text-xl text-slate-900 dark:text-white transition-colors">Active Applications</h3>
+                    <p className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 mt-0.5 sm:mt-1 transition-colors">Track your ongoing interview processes.</p>
+                  </div>
                 </div>
-              )}
-              <span className="hidden sm:inline font-bold text-sm text-slate-900 pr-2">{displayName}</span>
-            </div>
-          </div>
-        </div>
 
-        <div className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-10 pb-10">
-
-          {activeTab === "dashboard" && (
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 max-w-[1400px]">
-
-              <div className="lg:col-span-4 xl:col-span-3 space-y-6">
-                <div className="bg-white rounded-[2rem] p-6 lg:p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 flex flex-col items-center">
-                  {userProfile?.avatar_url ? (
-                    <img src={userProfile.avatar_url} alt="Avatar" className="w-24 h-24 sm:w-28 sm:h-28 rounded-full object-cover mb-4 sm:mb-5 border-4 border-white shadow-lg bg-slate-100" />
+                <div className="space-y-3 sm:space-y-4">
+                  {activeApps.length === 0 ? (
+                    <div className="py-12 sm:py-16 flex flex-col items-center justify-center text-center border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-2xl bg-slate-50/50 dark:bg-slate-950/50 px-4 transition-colors">
+                      <Briefcase className="w-10 h-10 sm:w-12 sm:h-12 text-slate-300 dark:text-slate-600 mb-3 sm:mb-4" />
+                      <h4 className="font-bold text-base sm:text-lg text-slate-900 dark:text-white mb-1.5 sm:mb-2 transition-colors">No active applications</h4>
+                      <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-medium mb-5 sm:mb-6 transition-colors">Head over to the Job Board to find your next role.</p>
+                      <button
+                        onClick={() => setActiveTab("explore")}
+                        className="px-6 sm:px-8 py-2.5 sm:py-3 bg-blue-600 dark:bg-blue-500 text-white font-bold rounded-xl text-xs sm:text-sm hover:bg-blue-700 dark:hover:bg-blue-600 transition-all active:scale-[0.98] shadow-lg shadow-blue-600/20 dark:shadow-blue-900/20 outline-none focus-visible:ring-4 focus-visible:ring-blue-500/40"
+                      >
+                        Explore Jobs
+                      </button>
+                    </div>
                   ) : (
-                    <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-slate-900 text-white mb-4 sm:mb-5 flex items-center justify-center font-bold text-3xl shadow-lg shadow-slate-900/20">
-                      {userInitials}
-                    </div>
-                  )}
+                    activeApps.map((app) => {
+                      const companyName = app.campaign?.company_name || app.campaign?.companyName || "Unknown Company";
+                      const campaignTitle = app.campaign?.title || "Unknown Role";
+                      const logoUrl = app.campaign?.logo_url || app.campaign?.logoUrl;
 
-                  <h2 className="text-lg sm:text-xl font-extrabold text-slate-900 tracking-tight mb-1">{displayName}</h2>
-                  <div className="flex flex-col items-center gap-2 mb-6">
-                    {userLocation && (
-                      <div className="flex items-center gap-1.5 text-xs sm:text-sm text-slate-500 font-medium">
-                        <MapPin className="w-4 h-4 text-slate-400" /> {userLocation}
-                      </div>
-                    )}
-                    <div className="flex items-center gap-1.5 text-xs sm:text-sm text-slate-500 font-medium">
-                      <Mail className="w-4 h-4 text-slate-400" /> {userProfile?.email || session?.user?.email}
-                    </div>
-                    {userProfile?.phone && (
-                      <div className="flex items-center gap-1.5 text-xs sm:text-sm text-slate-500 font-medium">
-                        <Phone className="w-4 h-4 text-slate-400" /> {userProfile.phone}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="w-full h-px bg-slate-100 mb-5 sm:mb-6"></div>
-
-                  <div className="w-full text-left space-y-4 sm:space-y-5 mb-6 sm:mb-8">
-                    <div>
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 block">Experience</span>
-                      <span className="text-sm font-semibold text-slate-900">{userProfile?.years_of_experience || "Not specified"}</span>
-                    </div>
-                    <div>
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 block">Top Niches</span>
-                      <div className="flex flex-wrap gap-2">
-                        {userNiches.length > 0 ? userNiches.map((niche: string) => (
-                          <span key={niche} className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700">
-                            {niche}
-                          </span>
-                        )) : (
-                          <span className="text-sm font-medium text-slate-500">Not selected</span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="w-full space-y-3 mb-6 sm:mb-8">
-                    {userProfile?.linkedin_url && (
-                      <a href={userProfile.linkedin_url} target="_blank" rel="noreferrer" className="flex items-center justify-between p-3 rounded-xl border border-slate-100 hover:border-blue-200 hover:bg-blue-50 transition-colors group">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600"><Globe className="w-4 h-4" /></div>
-                          <span className="text-sm font-semibold text-slate-700 group-hover:text-blue-700">Web / LinkedIn</span>
-                        </div>
-                        <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-blue-600" />
-                      </a>
-                    )}
-                    {userProfile?.resume_url && (
-                      <a href={userProfile.resume_url} target="_blank" rel="noreferrer" className="flex items-center justify-between p-3 rounded-xl border border-slate-100 hover:border-emerald-200 hover:bg-emerald-50 transition-colors group">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-600"><FileText className="w-4 h-4" /></div>
-                          <span className="text-sm font-semibold text-slate-700 group-hover:text-emerald-700">Resume / CV</span>
-                        </div>
-                        <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-emerald-600" />
-                      </a>
-                    )}
-                    {userProfile?.video_pitch_url && (
-                      <a href={userProfile.video_pitch_url} target="_blank" rel="noreferrer" className="flex items-center justify-between p-3 rounded-xl border border-slate-100 hover:border-purple-200 hover:bg-purple-50 transition-colors group">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center text-purple-600"><Video className="w-4 h-4" /></div>
-                          <span className="text-sm font-semibold text-slate-700 group-hover:text-purple-700">Video Pitch</span>
-                        </div>
-                        <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-purple-600" />
-                      </a>
-                    )}
-                  </div>
-
-                  <button
-                    onClick={() => handleTabChange("settings")}
-                    className="w-full bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 font-bold py-3 sm:py-3.5 rounded-2xl transition-all active:scale-[0.98]"
-                  >
-                    Edit Profile
-                  </button>
-                </div>
-              </div>
-
-              <div className="lg:col-span-8 xl:col-span-9 space-y-8">
-                <div className="bg-white rounded-[2rem] p-6 lg:p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100">
-                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 gap-3 sm:gap-0">
-                    <div>
-                      <h3 className="font-extrabold text-lg sm:text-xl text-slate-900">Active Applications</h3>
-                      <p className="text-xs sm:text-sm font-medium text-slate-500 mt-1">Track your ongoing interview processes.</p>
-                    </div>
-                    <button
-                      onClick={() => handleTabChange("applications")}
-                      className="text-sm font-bold text-blue-600 hover:text-blue-700 hover:bg-blue-50 px-4 py-2 rounded-xl transition-colors self-start sm:self-auto"
-                    >
-                      View All
-                    </button>
-                  </div>
-
-                  <div className="space-y-3">
-                    {activeApps.length === 0 ? (
-                      <div className="py-10 sm:py-12 flex flex-col items-center justify-center text-center border-2 border-dashed border-slate-100 rounded-2xl bg-slate-50/50 px-4">
-                        <Briefcase className="w-10 h-10 text-slate-300 mb-3" />
-                        <h4 className="font-bold text-slate-900 mb-1">No active applications</h4>
-                        <p className="text-sm text-slate-500 font-medium">Head over to the Applications tab to find your next role.</p>
-                        <button
-                          onClick={() => handleTabChange("applications")}
-                          className="mt-4 px-6 py-2.5 bg-slate-900 text-white font-bold rounded-xl text-sm hover:bg-slate-800 transition-all active:scale-[0.98]"
-                        >
-                          Find Jobs
-                        </button>
-                      </div>
-                    ) : (
-                      activeApps.map((app) => {
-                        const companyName = app.campaign?.company_name || app.campaign?.companyName || "Unknown Company";
-                        const campaignTitle = app.campaign?.title || "Unknown Role";
-                        const logoUrl = app.campaign?.logo_url || app.campaign?.logoUrl;
-
-                        return (
-                          <div key={app.id} className="group flex flex-col sm:flex-row sm:items-center justify-between p-4 sm:p-5 rounded-2xl border border-slate-100 hover:border-slate-200 hover:shadow-md transition-all bg-white gap-4 sm:gap-0">
-                            <div className="flex items-center gap-4 sm:gap-5">
-                              {logoUrl ? (
-                                <img src={logoUrl} alt="Logo" className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl object-cover border border-slate-100 shrink-0" />
-                              ) : (
-                                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center font-bold text-base sm:text-lg border border-blue-100 shrink-0">
-                                  {companyName.charAt(0)}
+                      return (
+                        <div key={app.id} onClick={() => router.push(`/campaign/${app.campaign?.id}`)} className="group flex flex-col sm:flex-row sm:items-center justify-between p-4 sm:p-5 rounded-2xl border border-slate-200/60 dark:border-slate-800 hover:border-blue-300 dark:hover:border-blue-500/50 hover:shadow-md transition-all bg-white dark:bg-slate-950/50 gap-4 sm:gap-0 cursor-pointer active:scale-[0.99] sm:active:scale-100">
+                          <div className="flex items-start sm:items-center gap-3 sm:gap-4">
+                            {logoUrl ? (
+                              <img src={logoUrl} alt="Logo" className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl object-cover border border-slate-100 dark:border-slate-800 shrink-0 bg-white" />
+                            ) : (
+                              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-xl flex items-center justify-center font-bold text-base sm:text-lg border border-blue-100 dark:border-blue-500/20 shrink-0 transition-colors">
+                                {companyName.charAt(0)}
+                              </div>
+                            )}
+                            <div>
+                              <h4 className="font-bold text-slate-900 dark:text-white text-sm sm:text-base line-clamp-1 transition-colors pr-2">{campaignTitle}</h4>
+                              <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-1 sm:mt-1.5">
+                                <div className="flex items-center gap-1.5 text-[10px] sm:text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider transition-colors">
+                                  <Building2 className="w-3 h-3 sm:w-3.5 sm:h-3.5" /> {companyName}
                                 </div>
-                              )}
-                              <div>
-                                <h4 className="font-bold text-slate-900 text-sm sm:text-base line-clamp-1">{campaignTitle}</h4>
-                                <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-1">
-                                  <div className="flex items-center gap-1 text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                                    <Building2 className="w-3 sm:w-3.5 h-3 sm:h-3.5 text-slate-400" /> {companyName}
-                                  </div>
-                                  <div className="hidden sm:block w-1 h-1 rounded-full bg-slate-300"></div>
-                                  <div className="flex items-center gap-1 text-xs font-medium text-slate-500">
-                                    <Clock className="w-3.5 h-3.5 text-slate-400" />
-                                    {app.created_at || app.createdAt
-                                      ? new Date(app.created_at || app.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-                                      : "Recently"
-                                    }
-                                  </div>
+                                <div className="hidden sm:block w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-700"></div>
+                                <div className="flex items-center gap-1.5 text-[10px] sm:text-xs font-medium text-slate-500 dark:text-slate-400 transition-colors">
+                                  <Clock className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                                  {app.created_at || app.createdAt
+                                    ? new Date(app.created_at || app.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                                    : "Recently"
+                                  }
                                 </div>
                               </div>
-                            </div>
-
-                            <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-5 w-full sm:w-auto mt-2 sm:mt-0 pt-3 sm:pt-0 border-t sm:border-0 border-slate-50">
-                              <div className="px-3 sm:px-4 py-1 sm:py-1.5 rounded-full border border-blue-100 bg-blue-50 text-blue-700 text-xs font-bold">
-                                {app.status}
-                              </div>
-                              <button
-                                onClick={() => handleTabChange("applications")}
-                                className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center sm:group-hover:bg-slate-900 sm:group-hover:text-white transition-colors text-slate-400"
-                              >
-                                <ChevronRight className="w-4 h-4" />
-                              </button>
                             </div>
                           </div>
-                        );
-                      })
-                    )}
-                  </div>
+
+                          <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4 w-full sm:w-auto mt-2 sm:mt-0 pt-3 sm:pt-0 border-t sm:border-0 border-slate-100 dark:border-slate-800">
+                            <div className="px-3 sm:px-4 py-1 sm:py-1.5 rounded-lg bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 border border-blue-100 dark:border-blue-500/20 text-[10px] sm:text-xs font-bold tracking-wide transition-colors">
+                              {app.status}
+                            </div>
+                            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-slate-50 dark:bg-slate-800 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-colors text-slate-400 dark:text-slate-500 shrink-0">
+                              <ChevronRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
                 </div>
               </div>
+            )}
 
-            </div>
-          )}
-
-          {activeTab === "applications" && (
-            <div className="max-w-[1400px]">
-              {allCampaignsList.length === 0 ? (
-                <div className="bg-white rounded-[2rem] p-8 lg:p-12 text-center border border-slate-100 shadow-sm py-16 lg:py-20 flex flex-col items-center">
-                  <Briefcase className="w-12 h-12 lg:w-16 lg:h-16 text-slate-200 mb-4" />
-                  <h2 className="text-xl lg:text-2xl font-bold mb-2 text-slate-900">No opportunities available</h2>
-                  <p className="text-sm lg:text-base text-slate-500 font-medium mb-6">There are currently no active job postings. Check back later!</p>
-                </div>
-              ) : (
-                <div className="bg-white rounded-[2rem] p-4 sm:p-6 lg:p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* TAB CONTENT: Job Board (Explore) */}
+            {activeTab === "explore" && (
+              <div className="space-y-3 sm:space-y-4">
+                {allCampaignsList.length === 0 ? (
+                  <div className="bg-white dark:bg-slate-900 rounded-[2rem] p-6 sm:p-8 lg:p-12 text-center border border-slate-200/60 dark:border-slate-800 shadow-sm py-12 sm:py-16 lg:py-20 flex flex-col items-center transition-colors">
+                    <Search className="w-10 h-10 sm:w-12 sm:h-12 lg:w-16 lg:h-16 text-slate-200 dark:text-slate-700 mb-4 sm:mb-5 transition-colors" />
+                    <h2 className="text-lg sm:text-xl lg:text-2xl font-bold mb-1.5 sm:mb-2 text-slate-900 dark:text-white transition-colors">No opportunities available</h2>
+                    <p className="text-xs sm:text-sm lg:text-base text-slate-500 dark:text-slate-400 font-medium transition-colors">There are currently no active job postings. Check back later!</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 gap-3 sm:gap-4">
                     {allCampaignsList.map(({ campaign, application }) => {
                       const companyName = campaign.company_name || campaign.companyName || "Confidential";
                       const campaignTitle = campaign.title || "Unknown Role";
                       const logoUrl = campaign.logo_url || campaign.logoUrl;
 
-                      let statusBg = "bg-slate-100";
-                      let statusText = "text-slate-600";
-                      let statusBorder = "border-slate-200";
+                      let statusBg = "bg-slate-50 dark:bg-slate-800";
+                      let statusText = "text-slate-600 dark:text-slate-300";
+                      let statusBorder = "border-slate-200 dark:border-slate-700";
                       let statusLabel = "Not Applied";
 
                       if (application) {
                         statusLabel = application.status;
                         if (application.status === "Applied" || application.status === "Screening") {
-                          statusBg = "bg-blue-50"; statusText = "text-blue-700"; statusBorder = "border-blue-100";
+                          statusBg = "bg-blue-50 dark:bg-blue-500/10"; statusText = "text-blue-700 dark:text-blue-400"; statusBorder = "border-blue-200 dark:border-blue-500/20";
                         } else if (application.status === "Interview") {
-                          statusBg = "bg-purple-50"; statusText = "text-purple-700"; statusBorder = "border-purple-100";
+                          statusBg = "bg-purple-50 dark:bg-purple-500/10"; statusText = "text-purple-700 dark:text-purple-400"; statusBorder = "border-purple-200 dark:border-purple-500/20";
                         } else if (application.status === "Offer" || application.status === "Hired") {
-                          statusBg = "bg-emerald-50"; statusText = "text-emerald-700"; statusBorder = "border-emerald-100";
+                          statusBg = "bg-emerald-50 dark:bg-emerald-500/10"; statusText = "text-emerald-700 dark:text-emerald-400"; statusBorder = "border-emerald-200 dark:border-emerald-500/20";
                         } else if (["Rejected", "Disqualified", "Withdrawn"].includes(application.status)) {
-                          statusBg = "bg-rose-50"; statusText = "text-rose-700"; statusBorder = "border-rose-100";
+                          statusBg = "bg-rose-50 dark:bg-rose-500/10"; statusText = "text-rose-700 dark:text-rose-400"; statusBorder = "border-rose-200 dark:border-rose-500/20";
                         }
                       }
 
                       return (
-                        <div key={campaign.id} className="flex flex-col p-4 sm:p-6 rounded-2xl border border-slate-100 hover:border-blue-200 hover:shadow-md transition-all bg-white relative group">
-
-                          <div className="flex justify-between items-start mb-5 sm:mb-6">
-                            <div className="flex gap-3 sm:gap-4 items-start pr-2">
-                              {logoUrl ? (
-                                <img src={logoUrl} alt="Logo" className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl object-cover border border-slate-100 shrink-0" />
-                              ) : (
-                                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-slate-50 text-slate-400 rounded-xl flex items-center justify-center font-bold text-base sm:text-lg border border-slate-100 shrink-0">
-                                  {companyName.charAt(0)}
+                        <div key={campaign.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 sm:p-5 rounded-2xl border border-slate-200/60 dark:border-slate-800 hover:border-blue-300 dark:hover:border-blue-500/50 hover:shadow-md transition-all bg-white dark:bg-slate-900 group gap-4 sm:gap-0 active:scale-[0.99] sm:active:scale-100">
+                          <div className="flex items-start sm:items-center gap-3 sm:gap-4">
+                            {logoUrl ? (
+                              <img src={logoUrl} alt="Logo" className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl object-cover border border-slate-100 dark:border-slate-800 shrink-0 bg-white" />
+                            ) : (
+                              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-slate-50 dark:bg-slate-950 text-slate-400 dark:text-slate-500 rounded-xl flex items-center justify-center font-bold text-base sm:text-lg border border-slate-200 dark:border-slate-800 shrink-0 transition-colors">
+                                {companyName.charAt(0)}
+                              </div>
+                            )}
+                            <div>
+                              <h4 className="font-bold text-slate-900 dark:text-white text-sm sm:text-base line-clamp-1 transition-colors pr-2">{campaignTitle}</h4>
+                              <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-1 sm:mt-1.5">
+                                <div className="flex items-center gap-1.5 text-[10px] sm:text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider transition-colors">
+                                  <Building2 className="w-3 h-3 sm:w-3.5 sm:h-3.5" /> {companyName}
                                 </div>
-                              )}
-                              <div>
-                                <h4 className="font-bold text-slate-900 text-base sm:text-lg leading-tight mb-1 line-clamp-2">{campaignTitle}</h4>
-                                <div className="text-xs sm:text-sm font-semibold text-slate-500 uppercase tracking-wider line-clamp-1">{companyName}</div>
+                                <div className="hidden sm:block w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-700"></div>
+                                <div className="flex items-center gap-1.5 text-[10px] sm:text-xs font-medium text-slate-500 dark:text-slate-400 transition-colors">
+                                  <Clock className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                                  {application
+                                    ? `Applied ${application.created_at || application.createdAt ? new Date(application.created_at || application.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : "Recently"}`
+                                    : `Posted ${campaign.created_at || campaign.createdAt ? new Date(campaign.created_at || campaign.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : "Recently"}`
+                                  }
+                                </div>
                               </div>
                             </div>
+                          </div>
 
+                          <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4 w-full sm:w-auto mt-2 sm:mt-0 pt-3 sm:pt-0 border-t sm:border-0 border-slate-100 dark:border-slate-800">
+                            <div className={cn("px-3 sm:px-4 py-1 sm:py-1.5 rounded-lg border text-[10px] sm:text-xs font-bold tracking-wide whitespace-nowrap transition-colors", statusBg, statusText, statusBorder)}>
+                              {statusLabel}
+                            </div>
                             <a
                               href={`/campaign/${campaign.id}`}
                               target="_blank"
                               rel="noreferrer"
-                              className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center hover:bg-blue-600 hover:text-white transition-colors text-slate-400 shrink-0 border border-slate-100 hover:border-blue-600"
+                              className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-slate-50 dark:bg-slate-800 flex items-center justify-center hover:bg-blue-600 hover:text-white dark:hover:bg-blue-600 transition-colors text-slate-400 dark:text-slate-500 shrink-0 border border-slate-200/60 dark:border-slate-700 active:scale-95"
                               title="View job posting"
                             >
-                              <ArrowUpRight className="w-4 h-4" />
+                              <ArrowUpRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                             </a>
-                          </div>
-
-                          <div className="mt-auto pt-4 sm:pt-5 border-t border-slate-50 flex items-center justify-between">
-                            <div className="flex items-center gap-1.5 text-[10px] sm:text-xs font-medium text-slate-400">
-                              <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                              <span className="hidden sm:inline">
-                                {application ? 'Applied' : 'Posted'}
-                              </span>
-                              {application
-                                ? ` ${application.created_at || application.createdAt ? new Date(application.created_at || application.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : "Recently"}`
-                                : ` ${campaign.created_at || campaign.createdAt ? new Date(campaign.created_at || campaign.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : "Recently"}`
-                              }
-                            </div>
-                            <div className={cn("px-3 sm:px-4 py-1 sm:py-1.5 rounded-full border text-[10px] sm:text-xs font-bold whitespace-nowrap", statusBg, statusText, statusBorder)}>
-                              {statusLabel}
-                            </div>
                           </div>
                         </div>
                       );
                     })}
                   </div>
-                </div>
-              )}
-            </div>
-          )}
+                )}
+              </div>
+            )}
 
-          {activeTab === "settings" && (
-            <div className="max-w-[1000px] pb-10">
-              <ProfileSettingsForm
-                userProfile={userProfile}
-                userId={userId}
-                session={session}
-                onSaveSuccess={fetchApplications}
-              />
-            </div>
-          )}
+            {/* TAB CONTENT: Settings */}
+            {activeTab === "settings" && (
+              <div className="w-full">
+                <ProfileSettingsForm
+                  userProfile={userProfile}
+                  userId={userId}
+                  session={session}
+                  onSaveSuccess={fetchApplications}
+                />
+              </div>
+            )}
+          </div>
+
         </div>
       </main>
+
+      {/* Floating Log Out Button - Optimized for mobile placement */}
+      <button 
+        onClick={() => signOut({ callbackUrl: '/' })} 
+        className="fixed bottom-6 right-4 sm:right-6 lg:bottom-10 lg:right-10 bg-white/90 dark:bg-slate-800/90 backdrop-blur-md border border-slate-200 dark:border-slate-700 shadow-xl text-rose-500 dark:text-rose-400 px-4 sm:px-5 py-2.5 sm:py-3 rounded-full flex items-center gap-2 sm:gap-2.5 font-bold text-xs sm:text-sm hover:bg-rose-50 dark:hover:bg-rose-500/20 hover:shadow-2xl transition-all z-50 group outline-none focus-visible:ring-4 focus-visible:ring-rose-500/40 active:scale-95"
+      >
+        <LogOut className="w-3.5 h-3.5 sm:w-4 sm:h-4 group-hover:-translate-x-0.5 transition-transform" /> 
+        <span className="hidden sm:inline">Log Out</span>
+        <span className="sm:hidden">Exit</span>
+      </button>
+
     </div>
   );
 }

@@ -6,8 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useSession } from 'next-auth/react';
 import { StepThreeSchema } from '@/schemas/wizard';
 import { cn } from '@/lib/utils';
-import { Camera, StopCircle, RefreshCw, CheckCircle2, Loader2 } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { Camera, StopCircle, RefreshCw, CheckCircle2, Loader2, Video, X } from 'lucide-react';
 
 const StepThree = forwardRef(function StepThree({ 
   defaultValues, 
@@ -28,13 +27,11 @@ const StepThree = forwardRef(function StepThree({
     }
   });
 
-  const pitchMethod = watch('pitchMethod');
   const mediaFile = watch('mediaFile');
 
   useImperativeHandle(ref, () => ({
     getValues: () => getValues(),
     validateAndSubmit: async () => {
-      // MANDATORY CHECK RESTORED
       if (!mediaFile) {
         setError('mediaFile', { type: 'manual', message: 'Please record a video pitch to submit your application.' });
         return false;
@@ -88,10 +85,7 @@ const StepThree = forwardRef(function StepThree({
       } catch (err: any) {
         if (err.name === 'NotFoundError' || err.name === 'OverconstrainedError') {
           try {
-            const constraints2 = { 
-              video: true, 
-              audio: true 
-            };
+            const constraints2 = { video: true, audio: true };
             newStream = await navigator.mediaDevices.getUserMedia(constraints2);
           } catch (err2: any) {
              throw new Error("Browser cannot find required devices. Check your connection.");
@@ -172,7 +166,6 @@ const StepThree = forwardRef(function StepThree({
   };
 
   const submitForm = async () => {
-    // MANDATORY CHECK RESTORED
     if (!mediaFile) {
       setError('mediaFile', { type: 'manual', message: 'Please record a video pitch to submit your application.' });
       return;
@@ -181,8 +174,6 @@ const StepThree = forwardRef(function StepThree({
     setIsUploading(true);
     try {
       let videoPitchUrl = null;
-
-      // 1. Get presigned URL
       const presignRes = await fetch('/api/upload/presign', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -196,7 +187,6 @@ const StepThree = forwardRef(function StepThree({
       
       if (!presignRes.ok) throw new Error(presignData.error || 'Failed to get upload URL');
 
-      // 2. Upload file to AWS S3
       const uploadRes = await fetch(presignData.uploadUrl, {
         method: 'PUT',
         headers: { 'Content-Type': mediaFile.type },
@@ -208,7 +198,6 @@ const StepThree = forwardRef(function StepThree({
       videoPitchUrl = presignData.publicUrl;
       const userId = session?.user ? (session.user as any).id : null;
 
-      // 3. Save URL to Profile
       if (userId) {
         await fetch(`/api/users/${userId}/profile`, {
           method: 'PATCH',
@@ -232,66 +221,87 @@ const StepThree = forwardRef(function StepThree({
   };
 
   return (
-    <form onSubmit={handleSubmit(submitForm)} className="space-y-5 sm:space-y-6 bg-white p-4 sm:p-8 rounded-2xl shadow-sm border border-slate-200 max-w-2xl mx-auto mt-4 sm:mt-8 relative">
+    <form onSubmit={handleSubmit(submitForm)} className="space-y-6 sm:space-y-8 bg-white dark:bg-slate-900 p-5 sm:p-8 rounded-2xl sm:rounded-3xl shadow-sm sm:shadow-md border border-slate-200/60 dark:border-slate-800 max-w-[480px] sm:max-w-2xl mx-auto mt-2 sm:mt-4 relative transition-colors duration-300">
+
+      <div className="text-center space-y-2 mb-4 sm:mb-6">
+        <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight flex items-center justify-center gap-2 transition-colors">
+          <Video className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600 dark:text-blue-500" /> Record Your Pitch
+        </h2>
+        <p className="text-sm sm:text-base text-slate-500 dark:text-slate-400 transition-colors">
+          Introduce yourself and highlight your closing skills.
+        </p>
+      </div>
 
       {mediaError && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-3 sm:px-4 py-3 rounded-xl text-xs sm:text-sm flex flex-col gap-2 relative">
-          <p className="font-medium pr-6">{mediaError}</p>
-          <button type="button" onClick={() => setMediaError(null)} className="absolute top-2.5 right-3 text-red-500 hover:text-red-700">×</button>
+        <div className="bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/20 text-rose-700 dark:text-rose-400 px-4 py-3 rounded-xl text-xs sm:text-sm flex flex-col gap-2 relative animate-in fade-in transition-colors">
+          <p className="font-bold pr-6">{mediaError}</p>
+          <button type="button" onClick={() => setMediaError(null)} className="absolute top-2.5 right-3 text-rose-500 hover:text-rose-700 dark:hover:text-rose-300 transition-colors">
+            <X className="w-4 h-4 sm:w-5 sm:h-5" />
+          </button>
         </div>
       )}
 
-      <div className="border border-slate-200 rounded-2xl bg-black aspect-video flex flex-col items-center justify-center relative overflow-hidden shadow-inner">
-        <video ref={videoPreviewRef} className={cn("w-full h-full object-cover", recorderState === 'idle' && "hidden")} playsInline autoPlay />
+      {/* Video Container */}
+      <div className="border-[3px] sm:border-4 border-slate-100 dark:border-slate-800 rounded-2xl sm:rounded-[2rem] bg-black aspect-video flex flex-col items-center justify-center relative overflow-hidden shadow-inner transition-colors duration-300">
+        <video ref={videoPreviewRef} className={cn("w-full h-full object-cover rounded-xl sm:rounded-[1.7rem]", recorderState === 'idle' && "hidden")} playsInline autoPlay />
         
         {recorderState === 'idle' && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 text-white p-4 sm:p-6 text-center z-10">
-            <Camera className="w-10 h-10 sm:w-12 sm:h-12 text-slate-400 mb-4 sm:mb-6" />
-            <button type="button" onClick={startRecording} className="mt-2 bg-red-600 hover:bg-red-700 text-white rounded-full w-14 h-14 sm:w-16 sm:h-16 flex items-center justify-center shadow-[0_0_20px_rgba(220,38,38,0.6)] transition-all hover:scale-105 group">
-              <div className="w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-white group-hover:scale-90 transition-transform"></div>
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-900/80 dark:bg-black/80 backdrop-blur-sm text-white p-6 text-center z-10 transition-all">
+            <Camera className="w-12 h-12 sm:w-16 sm:h-16 text-slate-400 dark:text-slate-500 mb-4 sm:mb-6 drop-shadow-md" />
+            <button 
+              type="button" 
+              onClick={startRecording} 
+              className="mt-2 bg-rose-600 hover:bg-rose-500 text-white rounded-full w-16 h-16 sm:w-20 sm:h-20 flex items-center justify-center shadow-[0_0_20px_rgba(225,29,72,0.5)] dark:shadow-[0_0_30px_rgba(225,29,72,0.6)] transition-all hover:scale-105 active:scale-95 group border-2 border-white/20 outline-none focus-visible:ring-4 focus-visible:ring-rose-500/40"
+            >
+              <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-white group-hover:scale-90 transition-transform"></div>
             </button>
-            <p className="mt-4 sm:mt-6 text-[10px] sm:text-sm text-slate-300 font-bold tracking-widest uppercase">Click to start recording</p>
-            <p className="mt-1.5 sm:mt-2 text-[10px] sm:text-xs text-slate-500 font-medium">Maximum duration: 2 minutes</p>
+            <p className="mt-5 sm:mt-8 text-xs sm:text-sm text-slate-200 font-bold tracking-widest uppercase">Click to start recording</p>
+            <p className="mt-2 text-[10px] sm:text-xs text-slate-400 font-medium bg-black/40 px-3 py-1 rounded-full backdrop-blur-md border border-white/10">Max duration: 2 minutes</p>
           </div>
         )}
 
         {recorderState === 'recording' && (
-          <div className="absolute bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-3 sm:gap-4 z-20">
-            <div className="bg-black/70 backdrop-blur-md text-white px-4 py-2 sm:px-5 sm:py-2.5 rounded-full font-mono text-base sm:text-lg flex items-center gap-2 sm:gap-3 shadow-lg border border-white/10">
-              <div className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-red-500 animate-pulse"></div>
+          <div className="absolute bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-3 sm:gap-4 z-20 animate-in slide-in-from-bottom-4">
+            <div className="bg-black/70 backdrop-blur-md text-white px-4 sm:px-5 py-2 sm:py-2.5 rounded-full font-mono text-sm sm:text-base font-bold flex items-center gap-2.5 sm:gap-3 shadow-xl border border-white/10">
+              <div className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-rose-500 animate-pulse shadow-[0_0_10px_rgba(225,29,72,0.8)]"></div>
               {formatTime(timer)}
             </div>
-            <button type="button" onClick={stopRecording} className="bg-white text-slate-900 hover:bg-slate-200 rounded-full w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center shadow-lg transition-transform hover:scale-105">
-              <StopCircle className="w-5 h-5 sm:w-6 sm:h-6" />
+            <button 
+              type="button" 
+              onClick={stopRecording} 
+              className="bg-white text-slate-900 hover:bg-slate-200 rounded-full w-12 h-12 sm:w-14 sm:h-14 flex items-center justify-center shadow-xl transition-all hover:scale-105 active:scale-95 outline-none focus-visible:ring-4 focus-visible:ring-white/40"
+            >
+              <StopCircle className="w-6 h-6 sm:w-7 sm:h-7 text-rose-600" />
             </button>
           </div>
         )}
       </div>
       
       {errors.mediaFile && (
-        <p className="text-xs sm:text-sm font-bold text-red-500 text-center bg-red-50 py-2 sm:py-3 rounded-lg border border-red-100">
+        <p className="text-[10px] sm:text-xs font-bold text-rose-500 dark:text-rose-400 text-center bg-rose-50 dark:bg-rose-500/10 py-2.5 sm:py-3 rounded-xl border border-rose-100 dark:border-rose-500/20 animate-in zoom-in-95 transition-colors mt-2 sm:mt-0">
           {(errors.mediaFile as any).message}
         </p>
       )}
 
-      {recorderState === 'idle' && (
-        <div className="pt-4 sm:pt-6 border-t border-slate-100">
-          <button type="submit" disabled={isUploading} className="w-full py-3.5 sm:py-4 font-bold text-sm sm:text-base rounded-xl bg-blue-600 hover:bg-blue-700 text-white transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-600/20 active:scale-[0.98] disabled:opacity-70">
-            {isUploading ? <><Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" /> Processing...</> : <><CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5" /> {campaignId ? "Continue to Agreement" : "Continue to Agreement"}</>}
+      {/* Buttons */}
+      <div className="pt-2 sm:pt-4">
+        {recorderState === 'idle' && (
+          <button type="submit" disabled={isUploading} className="w-full py-3.5 sm:py-4 font-bold text-sm sm:text-base rounded-xl bg-blue-600 dark:bg-blue-500 hover:bg-blue-700 dark:hover:bg-blue-600 text-white transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-600/20 dark:shadow-blue-900/20 active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed outline-none focus-visible:ring-4 focus-visible:ring-blue-500/40">
+            {isUploading ? <><Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" /> Processing...</> : <><CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5" /> Continue to Agreement</>}
           </button>
-        </div>
-      )}
+        )}
 
-      {recorderState === 'review' && (
-        <div className="flex flex-col-reverse sm:flex-row gap-3 sm:gap-4 pt-4 border-t border-slate-100">
-           <button type="button" onClick={retake} className="w-full sm:flex-1 py-3 sm:py-3.5 text-sm sm:text-base font-bold rounded-xl border-2 border-slate-200 text-slate-700 hover:bg-slate-50 transition-colors flex items-center justify-center gap-2">
-             <RefreshCw className="w-4 h-4 sm:w-5 sm:h-5" /> Retake
-           </button>
-           <button type="submit" disabled={isUploading} className="w-full sm:flex-1 py-3 sm:py-3.5 text-sm sm:text-base font-bold rounded-xl bg-blue-600 hover:bg-blue-700 text-white transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-600/20 active:scale-[0.98] disabled:opacity-70">
-             {isUploading ? <><Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" /> Uploading...</> : <><CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5" /> {campaignId ? "Continue to Agreement" : "Continue to Agreement"}</>}
-           </button>
-        </div>
-      )}
+        {recorderState === 'review' && (
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 animate-in slide-in-from-bottom-2">
+            <button type="button" onClick={retake} className="w-full sm:flex-1 py-3.5 sm:py-4 text-sm sm:text-base font-bold rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors flex items-center justify-center gap-2 active:scale-[0.98] outline-none focus-visible:ring-4 focus-visible:ring-slate-500/20">
+              <RefreshCw className="w-4 h-4 sm:w-5 sm:h-5" /> Retake
+            </button>
+            <button type="submit" disabled={isUploading} className="w-full sm:flex-1 py-3.5 sm:py-4 text-sm sm:text-base font-bold rounded-xl bg-blue-600 dark:bg-blue-500 hover:bg-blue-700 dark:hover:bg-blue-600 text-white transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-600/20 dark:shadow-blue-900/20 active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed outline-none focus-visible:ring-4 focus-visible:ring-blue-500/40">
+              {isUploading ? <><Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" /> Uploading...</> : <><CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5" /> Continue to Agreement</>}
+            </button>
+          </div>
+        )}
+      </div>
     </form>
   );
 });

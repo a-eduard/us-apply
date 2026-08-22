@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
+import { CookieBanner } from "@/components/layout/CookieBanner"; // Импортируем баннер
 
 export default function ClientWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -19,6 +20,9 @@ export default function ClientWrapper({ children }: { children: React.ReactNode 
       </main>
 
       {!isDashboard && <Footer />}
+
+      {/* Global Cookie Banner */}
+      <CookieBanner />
     </>
   );
 }

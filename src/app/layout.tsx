@@ -1,10 +1,14 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css"; 
 import AuthProvider from "@/providers/AuthProvider";
 import ClientWrapper from "@/components/layout/ClientWrapper";
+import { ThemeProvider } from "@/providers/ThemeProvider";
 
-const inter = Inter({ subsets: ["latin"] });
+const jakarta = Plus_Jakarta_Sans({ 
+  subsets: ["latin"],
+  variable: "--font-jakarta" 
+});
 
 export const metadata: Metadata = {
   title: "USclosers - Find Your Next Sales Role",
@@ -20,13 +24,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className={`${inter.className} bg-slate-50 min-h-screen flex flex-col`}>
-        <AuthProvider>
-          <ClientWrapper>
-            {children}
-          </ClientWrapper>
-        </AuthProvider>
+    <html lang="en" suppressHydrationWarning>
+      <body className={`${jakarta.variable} font-sans min-h-screen flex flex-col`}>
+        <ThemeProvider>
+          <AuthProvider>
+            <ClientWrapper>
+              {children}
+            </ClientWrapper>
+          </AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

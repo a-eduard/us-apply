@@ -1,1 +1,21 @@
 @import "tailwindcss";
+
+/* Override default sans font with Plus Jakarta Sans */
+@theme {
+  --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
+}
+
+/* Enable dark mode via class for next-themes in Tailwind v4 */
+@custom-variant dark (&:is(.dark *));
+
+/* Base styles for smooth theme transition */
+@layer base {
+  body {
+    @apply bg-slate-50 text-slate-900 transition-colors duration-300 antialiased;
+  }
+  
+  /* Dark mode root variables */
+  .dark body {
+    @apply bg-slate-950 text-slate-50;
+  }
+}

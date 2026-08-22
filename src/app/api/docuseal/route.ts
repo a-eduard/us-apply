@@ -1,7 +1,5 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
 
 const DOCUSEAL_API_URL = "https://sign.getbiz.me/api/submissions";
 const DOCUSEAL_API_KEY = process.env.DOCUSEAL_API_KEY;
@@ -10,31 +8,15 @@ const DOCUSEAL_BASE_URL = "https://sign.getbiz.me";
 
 export async function POST(req: Request) {
   try {
-    const session = await getServerSession(authOptions);
-    
-    if (!session || !session.user || !(session.user as any).id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const authUserId = parseInt((session.user as any).id, 10);
     const body = await req.json();
     let { applicationId, email, firstName, lastName } = body;
 
-    // SMART RECOVERY: Find the latest application for this user if ID is missing
-    if (!applicationId) {
-      const latestApp = await prisma.applications.findFirst({
-        where: { user_id: authUserId },
-        orderBy: { created_at: 'desc' }
-      });
-      
-      if (!latestApp) {
-        return NextResponse.json({ error: "Application not found in database" }, { status: 404 });
-      }
-      applicationId = latestApp.id;
-    }
+    const candidateEmail = email;
+    const candidateName = `${firstName || ""} ${lastName || ""}`.trim() || "Candidate";
 
-    const candidateEmail = email || session.user.email;
-    const candidateName = `${firstName || ""} ${lastName || ""}`.trim() || session.user.name || "Candidate";
+    if (!candidateEmail) {
+      return NextResponse.json({ error: "Email is required to generate agreement" }, { status: 400 });
+    }
 
     if (!DOCUSEAL_API_KEY || !DOCUSEAL_TEMPLATE_ID) {
       console.error("DocuSeal API credentials are not set in .env");
@@ -71,7 +53,7 @@ export async function POST(req: Request) {
     // SAFE PARSING: Extract the main object whether it's wrapped in an array or not
     const submission = Array.isArray(data) ? data[0] : data;
     
-    // SMART URL RESOLVER: Try to find the URL in multiple possible locations
+    // SMART URL RESOLVER
     let embedUrl = "";
     
     if (submission?.submitters && submission.submitters.length > 0) {
@@ -79,11 +61,9 @@ export async function POST(req: Request) {
     } else if (submission?.embed_url || submission?.url) {
       embedUrl = submission.embed_url || submission.url;
     } else if (submission?.slug) {
-      // Fallback for self-hosted versions: construct the signing link manually
       embedUrl = `${DOCUSEAL_BASE_URL}/s/${submission.slug}`;
     }
 
-    // If all checks fail, log the FULL response to Vercel so we can inspect it
     if (!embedUrl) {
       console.error("FULL DOCUSEAL RESPONSE:", JSON.stringify(data, null, 2));
       return NextResponse.json({ error: "Could not find embed_url in DocuSeal response" }, { status: 500 });
@@ -91,14 +71,20 @@ export async function POST(req: Request) {
 
     const submissionId = submission?.id ? submission.id.toString() : "unknown";
 
-    // Save the submission ID to our database
-    await prisma.applications.update({
-      where: { id: applicationId },
-      data: {
-        docusealSubmissionId: submissionId,
-        contractStatus: "SENT",
-      },
-    });
+    // ONLY update DB if we actually have a valid applicationId passed to us
+    if (applicationId && typeof applicationId === 'number') {
+      try {
+        await prisma.applications.update({
+          where: { id: applicationId },
+          data: {
+            docusealSubmissionId: submissionId,
+            contractStatus: "SENT",
+          },
+        });
+      } catch (dbError) {
+        console.warn("Could not attach Docuseal ID to existing application:", dbError);
+      }
+    }
 
     return NextResponse.json({
       docuseal_url: embedUrl,
